@@ -1,0 +1,71 @@
+# Virtu - Regras e Diretrizes do Projeto
+
+Este documento serve como a fonte única de verdade para as regras fundamentais de desenvolvimento do aplicativo Virtu.
+
+## 1. Regras Fundamentais de Código
+> [!IMPORTANT]
+> A violação destas regras será considerada uma falha crítica na implementação.
+
+- **SEM COMENTÁRIOS DE CÓDIGO:** O código deve ser auto-explicativo. Comentários só são permitidos se absolutamente necessários para explicar *porquê* algo foi feito de uma maneira não óbvia, nunca *o que* o código faz.
+- **GIT INTOCÁVEL:** Nunca execute comandos git ou manipule arquivos `.git` a menos que explicitamente solicitado. O versionamento é responsabilidade exclusiva do usuário.
+- **GERENCIAMENTO DE PACOTES:** Utilize sempre **Yarn**. Nunca use npm ou pnpm.
+- **TYPESCRIPT ESTRITO:** TypeScript sempre. O uso de `any` é proibido. Assegure a tipagem estrita em toda a aplicação.
+- **MODULARIDADE:**
+    - Evite arquivos gigantes ("God Objects").
+    - Separe a lógica da interface.
+    - Funcionalidades comuns devem ser extraídas para hooks ou utilitários.
+
+## 2. Arquitetura
+
+A estrutura de pastas deve ser respeitada rigorosamente para garantir consistência e manutenibilidade.
+
+### Estrutura Base
+- `src/app`: Contém as **Views** (Telas) da aplicação seguindo o File-based routing do Expo Router.
+- `components/features/[NomeDaView]`: Componentes específicos de uma funcionalidade ou tela.
+    - Exemplo: `components/features/Workout/ExerciseCard.tsx`
+- `components/ui`: Componentes genéricos e reutilizáveis (Design System).
+    - Exemplo: `components/ui/Button.tsx`, `components/ui/Input.tsx`
+
+### Princípios
+- **Views Limpas:** As telas em `src/app` devem atuar principalmente como orquestradores, delegando a renderização para componentes em `features` e a lógica para hooks.
+- **Separação de Responsabilidades:** Cada view deve ter sua própria pasta em `components/features` se tiver componentes específicos.
+
+## 3. Design System & UI
+> "Interface branca, com botões e detalhes em amarelo vibrante e preto."
+
+### Identidade Visual (Padrão "Smart Fit")
+- **Cores Primárias:**
+    - Fundo: `White (#FFFFFF)`
+    - Ação/Destaque: `Vibrant Yellow` (Definir Hex, ex: `#FDCB13`)
+    - Texto/Contraste: `Black (#000000)` ou Cinza Escuro
+- **Estilo:** Moderno, Clean, Intuitivo.
+
+### System Design
+Todas as telas devem seguir regras rígidas de espaçamento para consistência.
+- Implementar tokens de espaçamento (ex: 4px, 8px, 16px, 24px, 32px).
+- **Beleza é Prioridade:** Utilize sombras suaves, bordas arredondadas e feedback visual nas interações.
+- **Tipografia (Design System):**
+    - **Famílias:**
+        - Títulos/Destaques: `Montserrat` (Bold/ExtraBold) - Impactante e moderna.
+        - Texto/Corpo: `Inter` (Regular/Medium/SemiBold) - Alta legibilidade.
+    - **Hierarquia:**
+        - H1: 32px (ExtraBold)
+        - H2: 24px (Bold)
+        - H3: 20px (SemiBold)
+        - Body: 16px (Regular)
+        - Caption: 12px (Medium)
+
+- **Foco na Evolução (Dopaminérgico):**
+    - A interface deve celebrar cada conquista do usuário.
+    - Visualize o progresso de forma clara e gratificante (gráficos, badgers, barras de progresso).
+    - Feedback visual imediato e positivo para ações concluídas.
+- **Micro-interações:** Use animações sutis (`react-native-reanimated`) para tornar a interface viva e responsiva.
+- **Clareza:** Informações devem ser apresentadas de forma hierárquica e digerível. Evite poluição visual.
+
+## 4. Segurança
+- **Dados Sensíveis:** Trate dados de saúde e pessoais com extremo cuidado.
+- **Validação:** Utilize **ZOD** para toda validação de entrada de dados e schemas de API.
+- **Feedback:** Nunca exponha detalhes de erros de sistema para o usuário final.
+
+---
+*Este documento deve ser consultado antes de qualquer nova implementação.*
