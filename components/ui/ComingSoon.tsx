@@ -1,20 +1,30 @@
 import React from "react";
-import { View, StyleSheet, Dimensions } from "react-native";
+import { View, StyleSheet, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { ThemedText as Text } from "./ThemedText";
-import { Button } from "./Button";
 import { Colors, Spacing } from "@/src/constants/theme";
-import { router } from "expo-router";
-
-const { width } = Dimensions.get("window");
+import { router, Stack, useSegments } from "expo-router";
+import { BackButton } from "./BackButton";
 
 export function ComingSoon() {
+    const segments = useSegments();
+    // verifica se é uma tab
+    const isTab = segments.some(segment => segment === "(tabs)");
+
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, !isTab && styles.fullScreenContainer]}>
+            {!isTab && (
+                <>
+                    <Stack.Screen options={{ headerShown: false }} />
+                    <View style={styles.header}>
+                        <BackButton />
+                    </View>
+                </>
+            )}
+
             <View style={styles.content}>
                 <View style={styles.iconWrapper}>
                     <View style={[styles.bracket, styles.bracketTopLeft]} />
-
                     <View style={[styles.bracket, styles.bracketBottomRight]} />
 
                     <View style={styles.iconCircle}>
@@ -36,7 +46,6 @@ export function ComingSoon() {
                     </Text>
                 </View>
             </View>
-
         </View>
     );
 }
@@ -45,10 +54,24 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: Colors.background,
-        justifyContent: "space-between",
+        justifyContent: "center",
         padding: Spacing.lg,
-        paddingTop: 80,
-        paddingBottom: Spacing.xl,
+    },
+    fullScreenContainer: {
+        paddingTop: 60,
+    },
+    header: {
+        position: 'absolute',
+        top: 60,
+        left: Spacing.lg,
+        zIndex: 10,
+    },
+    backButton: {
+        width: 40,
+        height: 40,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: 20,
     },
     content: {
         flex: 1,
@@ -130,31 +153,5 @@ const styles = StyleSheet.create({
         textAlign: "center",
         color: Colors.text.secondary,
         lineHeight: 24,
-    },
-    button: {
-        width: "100%",
-        marginTop: Spacing.xl,
-    },
-    footer: {
-        alignItems: "center",
-        gap: 8,
-    },
-    versionBadge: {
-        width: 24,
-        height: 24,
-        backgroundColor: "#E0E0E0",
-        borderRadius: 4,
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    versionTextBadge: {
-        color: "#999",
-        fontWeight: "bold",
-    },
-    footerText: {
-        color: "#CCC",
-        letterSpacing: 2,
-        fontWeight: "bold",
-        fontSize: 10,
     },
 });

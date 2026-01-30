@@ -10,6 +10,15 @@ export const Colors = {
     },
     success: "#00C853",
     error: "#FF3D00",
+    gray: {
+        100: "#F5F7FA",
+        200: "#E0E0E0",
+        300: "#CCCCCC",
+        400: "#9E9E9E",
+        500: "#666666",
+        800: "#1A1A1A",
+        900: "#111111",
+    }
 };
 
 export const Spacing = {

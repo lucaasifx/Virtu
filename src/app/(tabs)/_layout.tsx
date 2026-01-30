@@ -1,6 +1,6 @@
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { Colors } from "@/src/constants/theme";
+import { Colors, FontFamily } from "@/src/constants/theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function TabLayout() {
@@ -12,6 +12,10 @@ export default function TabLayout() {
                 headerShown: false,
                 tabBarActiveTintColor: Colors.primary,
                 tabBarInactiveTintColor: Colors.secondary,
+                tabBarItemStyle: {
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                },
                 tabBarStyle: {
                     backgroundColor: Colors.background,
                     borderTopWidth: 0,
@@ -25,7 +29,7 @@ export default function TabLayout() {
                     paddingTop: 8,
                 },
                 tabBarLabelStyle: {
-                    fontFamily: "Inter_600SemiBold",
+                    fontFamily: FontFamily.body.semiBold,
                     fontSize: 10,
                 },
             }}
