@@ -3,7 +3,7 @@ import { ThemedText as Text } from '@/components/ui/ThemedText';
 import { Button } from '@/components/ui/Button';
 import { Colors, Spacing } from '@/src/constants/theme';
 import { WeeklySummary } from '@/components/features/Workout/WeeklySummary';
-import { WorkoutSessionCard } from '@/components/features/Workout/WorkoutSessionCard';
+import { History } from '@/components/features/Workout/History';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import UserHeader from '@/components/ui/UserHeader';
@@ -25,19 +25,10 @@ export default function Workout() {
                 </View>
 
                 <View style={styles.section}>
-                    <Text variant="h2" style={{ marginBottom: Spacing.xs }}>Histórico Recente</Text>
-
-                    <View>
-                        {MOCK_WORKOUTS.map((workout) => (
-                            <WorkoutSessionCard
-                                key={workout.id}
-                                workout={workout}
-                            />
-                        ))}
-                    </View>
+                    <History workouts={MOCK_WORKOUTS} />
                 </View>
 
-                <View style={styles.heightSpacer} />
+
             </ScrollView>
             <NewWorkoutButton />
         </View>
@@ -52,6 +43,7 @@ const styles = StyleSheet.create({
     scrollContent: {
         padding: Spacing.lg,
         paddingTop: 60,
+        paddingBottom: 100,
         gap: Spacing.lg,
     },
     section: {
@@ -71,8 +63,5 @@ const styles = StyleSheet.create({
         borderRadius: 32,
         paddingHorizontal: 32,
         height: 56,
-    },
-    heightSpacer: {
-        height: 100,
     },
 });

@@ -1,3 +1,13 @@
+import {
+    Montserrat_700Bold,
+    Montserrat_800ExtraBold,
+} from "@expo-google-fonts/montserrat";
+import {
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+} from "@expo-google-fonts/inter";
+
 export const Colors = {
     primary: "#FDCB13",
     secondary: "#000000",
@@ -40,6 +50,14 @@ export const FontFamily = {
         medium: "Inter_500Medium",
         semiBold: "Inter_600SemiBold",
     },
+};
+
+export const ThemeFonts = {
+    Montserrat_700Bold,
+    Montserrat_800ExtraBold,
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
 };
 
 export const Typography = {
