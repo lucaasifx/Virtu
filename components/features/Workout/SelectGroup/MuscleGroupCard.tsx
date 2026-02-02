@@ -17,9 +17,7 @@ interface MuscleGroupCardProps {
 }
 
 const { width } = Dimensions.get("window");
-// Full width minus padding (Spacing.lg * 2)
 const CARD_WIDTH = width - Spacing.lg * 2;
-// Adjust height to show more image as requested
 const CARD_HEIGHT = 220;
 
 export function MuscleGroupCard({ muscleGroup, title, image, isSelected, onPress, exerciseCount }: MuscleGroupCardProps) {
@@ -35,7 +33,6 @@ export function MuscleGroupCard({ muscleGroup, title, image, isSelected, onPress
                 contentFit="cover"
                 transition={200}
                 cachePolicy="memory-disk"
-                // Adding recycling key can help expo-image knowing when to keep/discard
                 recyclingKey={muscleGroup}
             />
 
@@ -55,7 +52,6 @@ export function MuscleGroupCard({ muscleGroup, title, image, isSelected, onPress
                 </Text>
             </View>
 
-            {/* Selection Overlay */}
             {isSelected && (
                 <View style={styles.selectionOverlay}>
                     <View style={styles.checkBadge}>
