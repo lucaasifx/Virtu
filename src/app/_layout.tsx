@@ -1,29 +1,40 @@
-import { Stack } from "expo-router";
+import { Stack, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import * as SystemUI from "expo-system-ui";
 import { useEffect } from "react";
+import { Platform } from "react-native";
+import * as NavigationBar from 'expo-navigation-bar';
 import { Ionicons } from "@expo/vector-icons";
-import {
-  useFonts,
-  Montserrat_700Bold,
-  Montserrat_800ExtraBold,
-} from "@expo-google-fonts/montserrat";
-import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-} from "@expo-google-fonts/inter";
+import { useFonts } from "expo-font";
+import { ThemeFonts } from "@/src/constants/theme";
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { ActiveWorkoutProvider } from "@/src/context/ActiveWorkoutContext";
+import { WorkoutProvider } from "@/src/context/WorkoutContext";
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
-    Montserrat_700Bold,
-    Montserrat_800ExtraBold,
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
+    ...ThemeFonts,
     ...Ionicons.font,
   });
+
+  const pathname = usePathname();
+
+  useEffect(() => {
+    const updateRootBackground = async () => {
+      const isDarkScreen = pathname.includes('FinishSelection') ||
+        pathname.includes('Countdown');
+
+      await SystemUI.setBackgroundColorAsync(isDarkScreen ? 'black' : 'white');
+
+      if (Platform.OS === 'android') {
+        await NavigationBar.setButtonStyleAsync(isDarkScreen ? 'light' : 'dark');
+      }
+    };
+
+    updateRootBackground();
+  }, [pathname]);
 
   useEffect(() => {
     if (loaded || error) {
@@ -36,9 +47,15 @@ export default function RootLayout() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" />
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-    </Stack>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <WorkoutProvider>
+        <ActiveWorkoutProvider>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          </Stack>
+        </ActiveWorkoutProvider>
+      </WorkoutProvider>
+    </GestureHandlerRootView>
   );
 }

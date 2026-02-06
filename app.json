@@ -18,7 +18,6 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -37,6 +36,14 @@
           "dark": {
             "backgroundColor": "#000000"
           }
+        }
+      ],
+      [
+        "expo-navigation-bar",
+        {
+          "position": "absolute",
+          "backgroundColor": "#00000000",
+          "barStyle": "dark-content"
         }
       ]
     ],
