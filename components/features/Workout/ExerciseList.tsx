@@ -1,10 +1,10 @@
-import React, { ReactElement }from "react";
+import React, { ReactElement } from "react";
 import { View, StyleSheet, FlatList, TouchableOpacity } from "react-native";
 import { ThemedText as Text } from "@/components/ui/ThemedText";
 import { Colors, Spacing } from "@/src/constants/theme";
 import { Exercise } from "@/src/types/workout";
 import { Ionicons } from "@expo/vector-icons";
-import Animated, { useAnimatedStyle, withSpring, interpolateColor, useDerivedValue, withTiming } from "react-native-reanimated";
+import Animated, { useAnimatedStyle, withSpring, interpolateColor, useDerivedValue } from "react-native-reanimated";
 
 interface ExerciseListProps {
     exercises: Exercise[];
@@ -15,7 +15,7 @@ interface ExerciseListProps {
 
 const CHECKBOX_SIZE = 24;
 
-const ExerciseItem = ({
+const ExerciseItem = React.memo(({
     item,
     isSelected,
     onToggle
@@ -66,7 +66,7 @@ const ExerciseItem = ({
             </Animated.View>
         </TouchableOpacity>
     );
-};
+});
 
 export default function ExerciseList({
     exercises,

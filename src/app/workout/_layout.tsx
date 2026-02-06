@@ -8,6 +8,7 @@ export default function WorkoutLayout() {
                 <Stack.Screen name="Selection" />
                 <Stack.Screen name="ExerciseSelection" />
                 <Stack.Screen name="FinishSelection" />
+                <Stack.Screen name="Execution" />
             </Stack>
         </WorkoutProvider>
     );

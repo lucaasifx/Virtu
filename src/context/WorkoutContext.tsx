@@ -54,16 +54,18 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
         setSelections({} as any);
     };
 
+    const contextValue = React.useMemo(() => ({
+        selectedGroups,
+        setSelectedGroups,
+        selections,
+        toggleExerciseSelection,
+        resetWorkout,
+        getExercisesForGroup,
+        clearExercisesForGroup
+    }), [selectedGroups, selections]);
+
     return (
-        <WorkoutContext.Provider value={{
-            selectedGroups,
-            setSelectedGroups,
-            selections,
-            toggleExerciseSelection,
-            resetWorkout,
-            getExercisesForGroup,
-            clearExercisesForGroup
-        }}>
+        <WorkoutContext.Provider value={contextValue}>
             {children}
         </WorkoutContext.Provider>
     );

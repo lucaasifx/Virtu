@@ -20,7 +20,7 @@ const { width } = Dimensions.get("window");
 const CARD_WIDTH = width - Spacing.lg * 2;
 const CARD_HEIGHT = 220;
 
-export function MuscleGroupCard({ muscleGroup, title, image, isSelected, onPress, exerciseCount }: MuscleGroupCardProps) {
+export const MuscleGroupCard = React.memo(function MuscleGroupCard({ muscleGroup, title, image, isSelected, onPress, exerciseCount }: MuscleGroupCardProps) {
     return (
         <TouchableOpacity
             onPress={onPress}
@@ -61,7 +61,7 @@ export function MuscleGroupCard({ muscleGroup, title, image, isSelected, onPress
             )}
         </TouchableOpacity>
     );
-}
+});
 
 const styles = StyleSheet.create({
     container: {

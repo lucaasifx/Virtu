@@ -3,6 +3,7 @@ import { ThemedText as Text } from "@/components/ui/ThemedText";
 import { Input } from "@/components/ui/Input";
 import { BackButton } from "@/components/ui/BackButton";
 import { Colors, Spacing } from "@/src/constants/theme";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface SelectionHeaderProps {
     search: string;
@@ -19,8 +20,11 @@ export default function SelectionHeader({
     subtitle = "Selecione o grupo muscular",
     placeholder = "Buscar exercício..."
 }: SelectionHeaderProps) {
+    const insets = useSafeAreaInsets();
+    const paddingTop = Math.max(insets.top, 20) + Spacing.lg;
+
     return (
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop }]}>
             <View style={styles.headerTop}>
                 <BackButton style={{ marginLeft: -Spacing.sm }} />
                 <Text variant="h3" style={styles.headerTitle}>NOVO TREINO</Text>
@@ -43,7 +47,6 @@ export default function SelectionHeader({
 
 const styles = StyleSheet.create({
     header: {
-        paddingTop: 60,
         paddingBottom: Spacing.md,
     },
     headerTop: {

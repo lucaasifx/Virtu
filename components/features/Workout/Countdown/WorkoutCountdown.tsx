@@ -1,14 +1,15 @@
-import React from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, StyleSheet, Dimensions, Platform } from 'react-native';
 import { Colors } from "@/src/constants/theme";
-import { ComingSoon } from "@/components/ui/ComingSoon";
 import Animated, {
     useAnimatedStyle,
     interpolate
 } from 'react-native-reanimated';
 import { StatusBar } from 'expo-status-bar';
-
-import { useCountdownController } from '../../../../src/hooks/workout/useCountdownController';
+import { useRouter } from 'expo-router';
+import { useActiveWorkout } from '@/src/context/ActiveWorkoutContext';
+import { useWorkoutCreation } from '@/src/context/WorkoutContext';
+import { useCountdownController } from '@/src/hooks/workout/useCountdownController';
 import { CountdownBackground } from './CountdownBackground';
 import { CountdownDisplay } from './CountdownDisplay';
 
@@ -17,6 +18,9 @@ const MAX_RADIUS = Math.sqrt(width * width + height * height);
 
 export function WorkoutCountdown() {
     const { count, phase, circleScale, contentOpacity } = useCountdownController();
+    const router = useRouter();
+    const { startWorkout } = useActiveWorkout();
+    const { selectedGroups, selections } = useWorkoutCreation();
 
     const finalCircleStyle = useAnimatedStyle(() => {
         return {
@@ -30,8 +34,21 @@ export function WorkoutCountdown() {
         };
     });
 
+    useEffect(() => {
+        if (phase === 'completed') {
+            const allExercises = selectedGroups.flatMap(group => selections[group] || []);
+            startWorkout(allExercises, selectedGroups);
+            router.replace('/workout/Execution');
+        }
+    }, [phase]);
+
+
     if (phase === 'completed') {
-        return <ComingSoon />;
+        return (
+            <View style={styles.container}>
+                <StatusBar style="light" translucent backgroundColor="transparent" />
+            </View>
+        );
     }
 
     return (

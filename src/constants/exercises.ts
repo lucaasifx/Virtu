@@ -84,3 +84,9 @@ export const EXERCISES_BY_GROUP: Record<MuscleGroup, Exercise[]> = {
         createExercise('other_2', 'Mobilidade', MuscleGroup.OTHER),
     ],
 };
+
+export const ALL_EXERCISES = Object.values(EXERCISES_BY_GROUP).flat();
+
+export const getExerciseById = (id: string): Exercise | undefined => {
+    return ALL_EXERCISES.find(ex => ex.id === id);
+};

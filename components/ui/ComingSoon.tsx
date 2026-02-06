@@ -3,13 +3,27 @@ import { View, StyleSheet, TouchableOpacity } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { ThemedText as Text } from "./ThemedText";
 import { Colors, Spacing } from "@/src/constants/theme";
-import { router, Stack, useSegments } from "expo-router";
+import { Href, router, Stack, useSegments } from "expo-router";
 import { BackButton } from "./BackButton";
+import Animated, { FadeInDown, ZoomIn } from "react-native-reanimated";
 
-export function ComingSoon() {
+interface ComingSoonProps {
+    redirectHref?: Href;
+}
+
+export function ComingSoon({ redirectHref }: ComingSoonProps) {
     const segments = useSegments();
     // verifica se é uma tab
     const isTab = segments.some(segment => segment === "(tabs)");
+
+    const handleRedirect = () => {
+        if (redirectHref) {
+            router.dismissAll();
+            router.replace(redirectHref);
+        } else {
+            router.back();
+        }
+    };
 
     return (
         <View style={[styles.container, !isTab && styles.fullScreenContainer]}>
@@ -17,13 +31,17 @@ export function ComingSoon() {
                 <>
                     <Stack.Screen options={{ headerShown: false }} />
                     <View style={styles.header}>
-                        <BackButton />
+                        <BackButton onPress={handleRedirect} />
                     </View>
                 </>
             )}
 
             <View style={styles.content}>
-                <View style={styles.iconWrapper}>
+                <Animated.View
+                    entering={ZoomIn.duration(600).springify()}
+                    style={styles.iconWrapper}
+                >
+
                     <View style={[styles.bracket, styles.bracketTopLeft]} />
                     <View style={[styles.bracket, styles.bracketBottomRight]} />
 
@@ -31,12 +49,18 @@ export function ComingSoon() {
                         <Ionicons name="construct" size={64} color={Colors.primary} />
                     </View>
 
-                    <View style={styles.gearBadge}>
+                    <Animated.View
+                        entering={ZoomIn.delay(300).springify()}
+                        style={styles.gearBadge}
+                    >
                         <Ionicons name="settings-sharp" size={20} color={Colors.secondary} />
-                    </View>
-                </View>
+                    </Animated.View>
+                </Animated.View>
 
-                <View style={styles.textContainer}>
+                <Animated.View
+                    entering={FadeInDown.delay(200).duration(500)}
+                    style={styles.textContainer}
+                >
                     <Text variant="h2" style={styles.title}>
                         PÁGINA EM{"\n"}CONSTRUÇÃO
                     </Text>
@@ -44,7 +68,7 @@ export function ComingSoon() {
                     <Text variant="body" style={styles.description}>
                         Nossos engenheiros estão ajustando as anilhas. Essa funcionalidade estará disponível em breve.
                     </Text>
-                </View>
+                </Animated.View>
             </View>
         </View>
     );
@@ -57,6 +81,8 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         padding: Spacing.lg,
     },
+    // ... items ...
+    // ... rest of styles
     fullScreenContainer: {
         paddingTop: 60,
     },
@@ -110,7 +136,7 @@ const styles = StyleSheet.create({
         width: 120,
         height: 120,
         borderRadius: 60,
-        backgroundColor: "#1A1A1A",
+        backgroundColor: Colors.gray[800],
         alignItems: "center",
         justifyContent: "center",
         zIndex: 1,
@@ -140,7 +166,7 @@ const styles = StyleSheet.create({
     },
     title: {
         textAlign: "center",
-        color: "#1A1A1A",
+        color: Colors.gray[800],
         letterSpacing: 0.5,
     },
     separator: {

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { View, StyleSheet, FlatList } from "react-native";
-import { useSafeAreaInsets, SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Stack, router } from "expo-router";
 import { Button } from "@/components/ui/Button";
 import { Colors, Spacing } from "@/src/constants/theme";
@@ -12,12 +12,11 @@ import { MUSCLE_GROUPS } from "@/src/constants/muscleGroups";
 
 export default function SelectionScreen() {
     const [search, setSearch] = useState("");
-    const { selectedGroups, setSelectedGroups, resetWorkout, clearExercisesForGroup } = useWorkoutCreation();
+    const { selectedGroups, setSelectedGroups, clearExercisesForGroup } = useWorkoutCreation();
 
-    useEffect(() => {
-    }, []);
 
-    const toggleSelection = (group: MuscleGroup) => {
+
+    const onToggle = (group: MuscleGroup) => {
         if (selectedGroups.includes(group)) {
             setSelectedGroups(selectedGroups.filter(g => g !== group));
             clearExercisesForGroup(group);
@@ -25,9 +24,21 @@ export default function SelectionScreen() {
             setSelectedGroups([...selectedGroups, group]);
         }
     };
+
     const filteredGroups = MUSCLE_GROUPS.filter(g =>
         g.title.toLowerCase().includes(search.toLowerCase())
     );
+
+    const renderItem = React.useCallback(({ item }: { item: typeof MUSCLE_GROUPS[0] }) => (
+        <MuscleGroupCard
+            muscleGroup={item.id}
+            title={item.title}
+            image={item.image}
+            isSelected={selectedGroups.includes(item.id)}
+            onPress={() => onToggle(item.id)}
+            exerciseCount={item.exerciseCount}
+        />
+    ), [selectedGroups]);
 
     const handleNext = () => {
         if (selectedGroups.length > 0)
@@ -42,6 +53,7 @@ export default function SelectionScreen() {
                 <FlatList
                     key="list-1-col"
                     data={filteredGroups}
+                    extraData={selectedGroups}
                     keyExtractor={(item) => item.id}
                     contentContainerStyle={styles.gridContent}
                     showsVerticalScrollIndicator={false}
@@ -55,16 +67,7 @@ export default function SelectionScreen() {
                             onSearchChange={setSearch}
                         />
                     }
-                    renderItem={({ item }) => (
-                        <MuscleGroupCard
-                            muscleGroup={item.id}
-                            title={item.title}
-                            image={item.image}
-                            isSelected={selectedGroups.includes(item.id)}
-                            onPress={() => toggleSelection(item.id)}
-                            exerciseCount={item.exerciseCount}
-                        />
-                    )}
+                    renderItem={renderItem}
                 />
                 <View style={styles.footer}>
                     <Button
