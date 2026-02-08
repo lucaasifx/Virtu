@@ -193,11 +193,34 @@ export const activeWorkoutReducer = (state: ActiveWorkoutState, action: ActiveWo
             if (exists) {
                 return activeWorkoutReducer(state, { type: 'REMOVE_EXERCISE', payload: { exerciseId } });
             } else {
+                const newExDef = getExerciseById(exerciseId);
+                const newExGroup = newExDef?.muscleGroup ?? 'Unknown';
+
+                let insertIndex = state.session.exerciseOrder.length;
+                let foundGroupStart = false;
+
+                for (let i = 0; i < state.session.exerciseOrder.length; i++) {
+                    const id = state.session.exerciseOrder[i];
+                    const def = getExerciseById(id);
+                    const group = def?.muscleGroup ?? 'Unknown';
+
+                    if (group === newExGroup) {
+                        foundGroupStart = true;
+                        insertIndex = i + 1;
+                    } else if (foundGroupStart) {
+                        break;
+                    }
+                }
+
                 const newExercise: ExerciseSession = {
                     exerciseId,
                     sets: [],
                     targetSets: 4
                 };
+
+                const newOrder = [...state.session.exerciseOrder];
+                newOrder.splice(insertIndex, 0, exerciseId);
+
                 return {
                     ...state,
                     session: {
@@ -206,7 +229,7 @@ export const activeWorkoutReducer = (state: ActiveWorkoutState, action: ActiveWo
                             ...state.session.exercises,
                             [exerciseId]: newExercise
                         },
-                        exerciseOrder: [...state.session.exerciseOrder, exerciseId]
+                        exerciseOrder: newOrder
                     }
                 };
             }
@@ -218,7 +241,6 @@ export const activeWorkoutReducer = (state: ActiveWorkoutState, action: ActiveWo
             const { fromIndex, toIndex } = action.payload;
             const { exercises, exerciseOrder } = state.session;
 
-            // Use order array for indexing
             const movingExerciseId = exerciseOrder[fromIndex];
             const targetExerciseId = exerciseOrder[toIndex];
 
@@ -235,7 +257,6 @@ export const activeWorkoutReducer = (state: ActiveWorkoutState, action: ActiveWo
             const [moved] = newOrder.splice(fromIndex, 1);
             newOrder.splice(toIndex, 0, moved);
 
-            // Re-evaluate Active Index
             let newActiveIndex = 0;
             for (let i = 0; i < newOrder.length; i++) {
                 const exId = newOrder[i];
@@ -244,7 +265,6 @@ export const activeWorkoutReducer = (state: ActiveWorkoutState, action: ActiveWo
                 if (ex.sets.length > 0) {
                     newActiveIndex = i + 1;
                 } else if (ex.skipped) {
-                    // Check context if prev was pending? Assuming strict history order:
                     newActiveIndex = i + 1;
                 } else {
                     newActiveIndex = i;
@@ -252,7 +272,6 @@ export const activeWorkoutReducer = (state: ActiveWorkoutState, action: ActiveWo
                 }
             }
 
-            // Sanitize
             const newExercises = { ...exercises };
             newOrder.forEach((id, i) => {
                 if (i > newActiveIndex) {
@@ -277,20 +296,15 @@ export const activeWorkoutReducer = (state: ActiveWorkoutState, action: ActiveWo
         case 'UPDATE_EXERCISES': {
             if (!state.session) return state;
 
-            // Payload is a list of ExerciseSession. 
-            // We need to verify standard history and then re-normalize.
             const newExercisesList = action.payload.exercises;
             const activeExerciseIndex = state.activeExerciseIndex;
 
-            // Simple check: IDs of first N items must match
-            // This assumes newExercisesList is the FULL list
             const currentOrder = state.session.exerciseOrder;
 
             for (let i = 0; i < activeExerciseIndex; i++) {
                 if (newExercisesList[i]?.exerciseId !== currentOrder[i]) return state;
             }
 
-            // Re-normalize
             const newDict: Record<string, ExerciseSession> = {};
             const newOrder: string[] = [];
 
@@ -314,20 +328,9 @@ export const activeWorkoutReducer = (state: ActiveWorkoutState, action: ActiveWo
             const { group, direction } = action.payload;
             const { exerciseOrder, exercises } = state.session;
 
-            // 1. Identify "Fluid" items
-            // "Real History" = items before active index with sets > 0
-
-            // Logic: Split order into [History] and [Fluid]
-            // We can't move history. We only reorder the Fluid part.
-
-            // If active index separates history, we just slice?
-            // BUT skipped items in history might be movable? 
-            // Simplifying: Assume strict history = 0 to activeIndex-1.
 
             const historyIds = exerciseOrder.slice(0, state.activeExerciseIndex);
             const fluidIds = exerciseOrder.slice(state.activeExerciseIndex);
-
-            // 2. Group Fluid Items
             const groups: { group: string, ids: string[] }[] = [];
             let currentGroup: string | null = null;
             let currentBlock: string[] = [];
@@ -349,7 +352,6 @@ export const activeWorkoutReducer = (state: ActiveWorkoutState, action: ActiveWo
             const groupIndex = groups.findIndex(g => g.group === group);
             if (groupIndex === -1) return state;
 
-            // 3. Swap
             if (direction === 'up' && groupIndex > 0) {
                 const prev = groups[groupIndex - 1];
                 const curr = groups[groupIndex];
@@ -364,13 +366,8 @@ export const activeWorkoutReducer = (state: ActiveWorkoutState, action: ActiveWo
                 return state;
             }
 
-            // 4. Reconstruct
             const newFluidIds = groups.flatMap(g => g.ids);
             const newOrder = [...historyIds, ...newFluidIds];
-
-            // Active index remains same value (pointing to start of fluid)
-            // unless we did something fancy with skipped items, 
-            // but here we just reordered the future.
 
             return {
                 ...state,

@@ -1,7 +1,7 @@
 import { Stack, usePathname } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import * as SystemUI from "expo-system-ui";
-import { useEffect, useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import { Platform } from "react-native";
 import * as NavigationBar from 'expo-navigation-bar';
 import { StatusBar } from 'expo-status-bar';
@@ -10,11 +10,20 @@ import { useFonts } from "expo-font";
 import { ThemeFonts } from "@/src/constants/theme";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ActiveWorkoutProvider } from "@/src/context/ActiveWorkoutContext";
-import { WorkoutProvider } from "@/src/context/WorkoutContext";
+import { WorkoutProvider, useWorkoutCreation } from "@/src/context/WorkoutContext";
 
 SplashScreen.preventAutoHideAsync();
 
 const DARK_SCREENS = ['FinishSelection', 'Countdown', 'Execution'];
+
+function ActiveWorkoutBridge({ children }: { children: React.ReactNode }) {
+  const { resetWorkout } = useWorkoutCreation();
+  return (
+    <ActiveWorkoutProvider onWorkoutEnd={resetWorkout}>
+      {children}
+    </ActiveWorkoutProvider>
+  );
+}
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
@@ -33,7 +42,6 @@ export default function RootLayout() {
       await SystemUI.setBackgroundColorAsync(isDarkScreen ? 'black' : 'white');
 
       if (Platform.OS === 'android') {
-        // Only set button style - edge-to-edge is configured via app.json plugin
         await NavigationBar.setButtonStyleAsync(isDarkScreen ? 'light' : 'dark');
       }
     };
@@ -59,13 +67,14 @@ export default function RootLayout() {
         backgroundColor="transparent"
       />
       <WorkoutProvider>
-        <ActiveWorkoutProvider>
+        <ActiveWorkoutBridge>
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           </Stack>
-        </ActiveWorkoutProvider>
+        </ActiveWorkoutBridge>
       </WorkoutProvider>
     </GestureHandlerRootView>
   );
 }
+

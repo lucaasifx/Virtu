@@ -18,22 +18,17 @@ export default function ExerciseSelectionScreen() {
     const isEditMode = params.mode === 'edit';
     const groupIndex = parseInt(params.groupIndex || '0', 10);
 
-    // Creation Context
     const { selectedGroups, toggleExerciseSelection, selections } = useWorkoutCreation();
 
-    // Active Context
     const { session, toggleExercise } = useActiveWorkout();
 
-    // Determine Group
     let currentGroup: MuscleGroup | null = null;
 
     if (isEditMode) {
-        // In edit mode, we expect muscleGroup param
         if (params.muscleGroup) {
             currentGroup = params.muscleGroup as MuscleGroup;
         } else {
-            // Fallback or error?
-            currentGroup = MuscleGroup.CHEST; // Safe default?
+            currentGroup = MuscleGroup.CHEST;
         }
     } else {
         if (selectedGroups && selectedGroups.length > 0 && groupIndex < selectedGroups.length) {
@@ -42,22 +37,22 @@ export default function ExerciseSelectionScreen() {
     }
 
     if (!currentGroup) {
-        // Handle case where state is missing (reload/deep link?)
         return <View style={styles.container} />;
     }
 
     const exercises = EXERCISES_BY_GROUP[currentGroup] || [];
 
-    // Determine Selected IDs & Toggle Handler
     let selectedIds: string[] = [];
     let handleToggle = (id: string) => { };
 
     if (isEditMode) {
         if (session) {
-            selectedIds = session.exercises
-                .map(e => e.exerciseId);
+            selectedIds = session.exerciseOrder.filter(id => {
+                const ex = exercises.find(e => e.id === id);
+                return ex !== undefined;
+            });
             handleToggle = (id: string) => {
-                const exerciseInSession = session.exercises.find(e => e.exerciseId === id);
+                const exerciseInSession = session.exercises[id];
 
                 if (exerciseInSession && exerciseInSession.sets.length > 0) {
                     setPendingRemovalId(id);

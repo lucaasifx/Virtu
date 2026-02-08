@@ -22,7 +22,7 @@ interface GroupSectionData {
 }
 
 export function WorkoutExerciseListModal({ visible, onClose }: WorkoutExerciseListModalProps) {
-    const { session, updateExercises, moveGroup, reorderExercises, activeExerciseIndex } = useActiveWorkout();
+    const { session, moveGroup, reorderExercises, activeExerciseIndex } = useActiveWorkout();
     const insets = useSafeAreaInsets();
 
     if (!session) return null;
