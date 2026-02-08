@@ -1,5 +1,5 @@
 import React from "react";
-import { View, StyleSheet, TouchableOpacity } from "react-native";
+import { View, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { ThemedText as Text } from "./ThemedText";
 import { Colors, Spacing } from "@/src/constants/theme";
@@ -81,8 +81,6 @@ const styles = StyleSheet.create({
         justifyContent: "center",
         padding: Spacing.lg,
     },
-    // ... items ...
-    // ... rest of styles
     fullScreenContainer: {
         paddingTop: 60,
     },

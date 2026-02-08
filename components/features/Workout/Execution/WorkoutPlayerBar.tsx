@@ -3,18 +3,24 @@ import { View, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { ThemedText as Text } from "@/components/ui/ThemedText";
 import { Colors, Spacing } from "@/src/constants/theme";
 import { Ionicons } from '@expo/vector-icons';
+import { getExerciseById } from '@/src/constants/exercises';
 import { useActiveWorkout } from '@/src/context/ActiveWorkoutContext';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { WorkoutExerciseListModal } from './WorkoutExerciseListModal';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 
-const { width } = Dimensions.get('window');
-
 export function WorkoutPlayerBar() {
-    const { isPaused, togglePause, nextExercise, finishWorkout, getActiveExercise, skipExercise } = useActiveWorkout();
+    const { isPaused, togglePause, nextExercise, getActiveExercise, skipExercise, session, activeExerciseIndex } = useActiveWorkout();
     const insets = useSafeAreaInsets();
     const [showList, setShowList] = React.useState(false);
     const [showSkipConfirm, setShowSkipConfirm] = React.useState(false);
+
+    // Calculate Next Exercise
+    const nextExerciseId = session?.exerciseOrder[activeExerciseIndex + 1];
+    const nextExerciseDef = nextExerciseId ? getExerciseById(nextExerciseId) : null;
+
+    const labelText = nextExerciseDef ? 'PRÓXIMO EXERCÍCIO' : 'FIM DO TREINO';
+    const nameText = nextExerciseDef ? nextExerciseDef.name : 'Finalizar Treino';
 
     const handleNext = () => {
         const currentExercise = getActiveExercise();
@@ -38,9 +44,9 @@ export function WorkoutPlayerBar() {
                     <View style={styles.listIcon}>
                         <Ionicons name="list" size={20} color={Colors.gray[400]} />
                     </View>
-                    <View>
-                        <Text style={styles.workoutLabel}>TREINO A</Text>
-                        <Text style={styles.workoutName}>Peitoral Completo</Text>
+                    <View style={{ flex: 1 }}>
+                        <Text style={styles.workoutLabel}>{labelText}</Text>
+                        <Text style={styles.workoutName} numberOfLines={1}>{nameText}</Text>
                     </View>
                 </TouchableOpacity>
 
@@ -103,6 +109,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 12,
+        flex: 1, // Take available space
+        minWidth: 0, // Allow shrinking below content size
     },
     listIcon: {
         width: 40,

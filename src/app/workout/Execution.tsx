@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, BackHandler, Alert } from 'react-native';
 import { Colors } from "@/src/constants/theme";
-import { StatusBar } from 'expo-status-bar';
 import { useActiveWorkout } from '@/src/context/ActiveWorkoutContext';
 import { Redirect, useRouter } from 'expo-router';
 import { ExecutionHeader } from '@/components/features/Workout/Execution/ExecutionHeader';
@@ -51,7 +50,6 @@ export default function ExecutionScreen() {
 
     return (
         <View style={styles.container}>
-            <StatusBar style="light" translucent backgroundColor="transparent" />
 
             <ScrollView
                 style={styles.scrollContainer}

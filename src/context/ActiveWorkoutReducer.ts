@@ -23,6 +23,11 @@ export type ActiveWorkoutAction =
     | { type: 'UPDATE_EXERCISES'; payload: { exercises: ExerciseSession[] } }
     | { type: 'MOVE_GROUP'; payload: { group: MuscleGroup; direction: 'up' | 'down' } };
 
+// Helper to get active exercise ID safely
+const getActiveExerciseId = (session: WorkoutSession, index: number) => {
+    return session.exerciseOrder[index];
+};
+
 export const activeWorkoutReducer = (state: ActiveWorkoutState, action: ActiveWorkoutAction): ActiveWorkoutState => {
     switch (action.type) {
         case 'START_WORKOUT':
@@ -32,37 +37,51 @@ export const activeWorkoutReducer = (state: ActiveWorkoutState, action: ActiveWo
                     startTime: new Date(),
                     status: 'active',
                     muscleGroups: action.payload.groups,
-                    exercises: action.payload.exercises.map(id => ({
-                        exerciseId: id,
-                        sets: [],
-                        targetSets: 4
-                    }))
+                    exercises: action.payload.exercises.reduce((acc, id) => {
+                        acc[id] = { exerciseId: id, sets: [], targetSets: 4 };
+                        return acc;
+                    }, {} as Record<string, ExerciseSession>),
+                    exerciseOrder: action.payload.exercises
                 },
                 activeExerciseIndex: 0,
                 isPaused: false
             };
 
         case 'LOG_SET': {
-            if (!state.session) return state;
+            const { session, activeExerciseIndex } = state;
+            if (!session) return state;
+            const { weight, reps, rpe } = action.payload;
 
-            const updatedExercises = state.session.exercises.map((ex, idx) => {
-                if (idx !== state.activeExerciseIndex) return ex;
+            const activeExId = getActiveExerciseId(session, activeExerciseIndex);
+            if (!activeExId) return state;
 
-                const newSet: SetLog = {
-                    id: Date.now().toString(),
-                    weight: action.payload.weight,
-                    reps: action.payload.reps,
-                    rpe: action.payload.rpe,
-                    completedAt: new Date(),
-                    type: 'normal'
-                };
+            const activeEx = session.exercises[activeExId];
+            if (!activeEx) return state;
 
-                return { ...ex, sets: [...ex.sets, newSet] };
-            });
+            const newSet: SetLog = {
+                id: Date.now().toString(),
+                weight,
+                reps,
+                rpe,
+                completedAt: new Date(),
+                type: 'normal'
+            };
+
+            // Normalized Update: O(1) complexity
+            const updatedExercise = {
+                ...activeEx,
+                sets: [...activeEx.sets, newSet]
+            };
 
             return {
                 ...state,
-                session: { ...state.session, exercises: updatedExercises }
+                session: {
+                    ...session,
+                    exercises: {
+                        ...session.exercises,
+                        [activeExId]: updatedExercise
+                    }
+                }
             };
         }
 
@@ -74,7 +93,7 @@ export const activeWorkoutReducer = (state: ActiveWorkoutState, action: ActiveWo
 
         case 'NEXT_EXERCISE': {
             if (!state.session) return state;
-            if (state.activeExerciseIndex < state.session.exercises.length - 1) {
+            if (state.activeExerciseIndex < state.session.exerciseOrder.length - 1) {
                 return { ...state, activeExerciseIndex: state.activeExerciseIndex + 1 };
             }
             return state;
@@ -89,30 +108,37 @@ export const activeWorkoutReducer = (state: ActiveWorkoutState, action: ActiveWo
         case 'SKIP_EXERCISE': {
             if (!state.session) return state;
 
-            const updatedExercises = state.session.exercises.map((ex, idx) => {
-                if (idx !== state.activeExerciseIndex) return ex;
-                return { ...ex, skipped: true };
-            });
+            const activeExId = getActiveExerciseId(state.session, state.activeExerciseIndex);
+            if (!activeExId) return state;
 
-            // Identify if we can move next
+            const activeEx = state.session.exercises[activeExId];
+            if (!activeEx) return state;
+
+            const updatedExercise = { ...activeEx, skipped: true };
+
             let nextIndex = state.activeExerciseIndex;
-            if (nextIndex < state.session.exercises.length - 1) {
+            if (nextIndex < state.session.exerciseOrder.length - 1) {
                 nextIndex++;
             }
 
             return {
                 ...state,
                 activeExerciseIndex: nextIndex,
-                session: { ...state.session, exercises: updatedExercises }
+                session: {
+                    ...state.session,
+                    exercises: {
+                        ...state.session.exercises,
+                        [activeExId]: updatedExercise
+                    }
+                }
             };
         }
 
         case 'FINISH_WORKOUT':
-            // Persistence logic is handled in the Context or Middleware, Reducer just clears or updates status
             if (!state.session) return state;
             return {
                 ...state,
-                session: null // Or mark as completed if we wanted to show a summary screen reading this state
+                session: null
             };
 
         case 'CANCEL_WORKOUT':
@@ -125,41 +151,48 @@ export const activeWorkoutReducer = (state: ActiveWorkoutState, action: ActiveWo
         case 'REMOVE_EXERCISE': {
             if (!state.session) return state;
             const { exerciseId } = action.payload;
-            const exIndex = state.session.exercises.findIndex(e => e.exerciseId === exerciseId);
 
-            if (exIndex === -1) return state;
+            // Check if exists
+            if (!state.session.exercises[exerciseId]) return state;
 
-            const newExercises = state.session.exercises.filter(e => e.exerciseId !== exerciseId);
+            // 1. Remove from Dict
+            const newExercises = { ...state.session.exercises };
+            delete newExercises[exerciseId];
 
-            // Re-calculate Index atomically
+            // 2. Remove from Order
+            const newOrder = state.session.exerciseOrder.filter(id => id !== exerciseId);
+
+            // 3. Adjust Index
+            const exIndex = state.session.exerciseOrder.indexOf(exerciseId);
             let newIndex = state.activeExerciseIndex;
-            if (newExercises.length === 0) {
+
+            if (newOrder.length === 0) {
                 newIndex = 0;
             } else if (exIndex < state.activeExerciseIndex) {
                 newIndex = state.activeExerciseIndex - 1;
             } else if (exIndex === state.activeExerciseIndex) {
-                if (newIndex >= newExercises.length) {
-                    newIndex = newExercises.length - 1;
-                }
+                if (newIndex >= newOrder.length) newIndex = newOrder.length - 1;
             }
 
             return {
                 ...state,
                 activeExerciseIndex: Math.max(0, newIndex),
-                session: { ...state.session, exercises: newExercises }
+                session: {
+                    ...state.session,
+                    exercises: newExercises,
+                    exerciseOrder: newOrder
+                }
             };
         }
 
         case 'TOGGLE_EXERCISE': {
             if (!state.session) return state;
             const { exerciseId } = action.payload;
-            const exists = state.session.exercises.some(e => e.exerciseId === exerciseId);
+            const exists = !!state.session.exercises[exerciseId];
 
             if (exists) {
-                // Reuse REMOVE logic
                 return activeWorkoutReducer(state, { type: 'REMOVE_EXERCISE', payload: { exerciseId } });
             } else {
-                // ADD
                 const newExercise: ExerciseSession = {
                     exerciseId,
                     sets: [],
@@ -169,7 +202,11 @@ export const activeWorkoutReducer = (state: ActiveWorkoutState, action: ActiveWo
                     ...state,
                     session: {
                         ...state.session,
-                        exercises: [...state.session.exercises, newExercise]
+                        exercises: {
+                            ...state.session.exercises,
+                            [exerciseId]: newExercise
+                        },
+                        exerciseOrder: [...state.session.exerciseOrder, exerciseId]
                     }
                 };
             }
@@ -179,178 +216,135 @@ export const activeWorkoutReducer = (state: ActiveWorkoutState, action: ActiveWo
             if (!state.session) return state;
 
             const { fromIndex, toIndex } = action.payload;
-            const exercises = state.session.exercises;
+            const { exercises, exerciseOrder } = state.session;
 
-            // Security Check: Prevent moving "Real History" (Completed with sets)
-            const movingExercise = exercises[fromIndex];
-            const targetExercise = exercises[toIndex];
+            // Use order array for indexing
+            const movingExerciseId = exerciseOrder[fromIndex];
+            const targetExerciseId = exerciseOrder[toIndex];
 
-            const isRealHistory = (ex: ExerciseSession, index: number) => {
-                // It is real history if it has sets logged AND is effectively in the past
-                // But for simplicity, we just check sets. If you have sets, you are locked.
-                return ex.sets.length > 0;
-            };
+            const movingExercise = exercises[movingExerciseId];
+            const targetExercise = exercises[targetExerciseId];
 
-            if (isRealHistory(movingExercise, fromIndex) || isRealHistory(targetExercise, toIndex)) {
-                // Cannot move items with logged sets
+            const isRealHistory = (ex: ExerciseSession) => ex.sets.length > 0;
+
+            if (isRealHistory(movingExercise) || isRealHistory(targetExercise)) {
                 return state;
             }
 
-            const newExercises = [...exercises];
-            const [moved] = newExercises.splice(fromIndex, 1);
-            newExercises.splice(toIndex, 0, moved);
+            const newOrder = [...exerciseOrder];
+            const [moved] = newOrder.splice(fromIndex, 1);
+            newOrder.splice(toIndex, 0, moved);
 
-            // Re-evaluate Active Index and Sanitize State
-            // The Active Index is the first item that is NOT "History".
-            // History = continuous block of (sets > 0 OR skipped=true) from the start.
-            // If we find a "Pending" item, that's the start of Future.
-            // ANY item in the Future (after Active Index) must verify it is NOT skipped.
-            // If a skipped item was moved to future, it must be unskipped.
-
+            // Re-evaluate Active Index
             let newActiveIndex = 0;
-            for (let i = 0; i < newExercises.length; i++) {
-                const ex = newExercises[i];
+            for (let i = 0; i < newOrder.length; i++) {
+                const exId = newOrder[i];
+                const ex = exercises[exId];
+
                 if (ex.sets.length > 0) {
-                    // Completed with sets -> Always History
                     newActiveIndex = i + 1;
                 } else if (ex.skipped) {
-                    // Skipped -> History, UNLESS we previously found a 'Pending' gap?
-                    // Actually, if we encounter a 'Pending' item, the history block ends.
-                    // But here, we haven't found pending yet.
+                    // Check context if prev was pending? Assuming strict history order:
                     newActiveIndex = i + 1;
                 } else {
-                    // Found a Pending item (No sets, not skipped).
-                    // This creates a boundary.
                     newActiveIndex = i;
                     break;
                 }
             }
 
-            // Sanitize Future: Unskip any skipped items after the new active index
-            const sanitizedExercises = newExercises.map((ex, i) => {
-                if (i > newActiveIndex && ex.skipped) {
-                    const clean = { ...ex };
-                    delete clean.skipped;
-                    return clean;
+            // Sanitize
+            const newExercises = { ...exercises };
+            newOrder.forEach((id, i) => {
+                if (i > newActiveIndex) {
+                    const ex = newExercises[id];
+                    if (ex.skipped) {
+                        newExercises[id] = { ...ex, skipped: undefined };
+                    }
                 }
-                return ex;
             });
-
-            // Double Check: The item at newActiveIndex should also be unskipped if it was skipped?
-            // Wait, our loop determined newActiveIndex by finding the first NON-Skipped.
-            // So newExercises[newActiveIndex] is guaranteed to be !skipped (or it's the end of array).
-            // BUT, if we broke early, 'i' is the index of the pending item.
-            // So sanitizedExercises[newActiveIndex] is fine.
-
-            // Edge case: simple swap of [Skip, Pending] -> [Pending, Skip]
-            // Loop:
-            // 0: Pending. Break. newActive = 0.
-            // Map:
-            // 1: Skip. i > 0. Unskip! -> Pending.
-            // Result: [Pending, Pending]. Active=0.
-            // Correct.
 
             return {
                 ...state,
                 activeExerciseIndex: newActiveIndex,
-                session: { ...state.session, exercises: sanitizedExercises }
+                session: {
+                    ...state.session,
+                    exerciseOrder: newOrder,
+                    exercises: newExercises
+                }
             };
         }
 
         case 'UPDATE_EXERCISES': {
             if (!state.session) return state;
 
-            // Payload contains ONLY the exercise list?
-            // Need to verify if we are getting full list or partial.
-            // Tool usage suggests full list.
-            const newExercises = action.payload.exercises;
+            // Payload is a list of ExerciseSession. 
+            // We need to verify standard history and then re-normalize.
+            const newExercisesList = action.payload.exercises;
+            const activeExerciseIndex = state.activeExerciseIndex;
 
-            // Ensure History Integrity
-            const historyLimit = state.activeExerciseIndex;
-            const oldHistory = state.session.exercises.slice(0, historyLimit);
-            const newHistoryCandidate = newExercises.slice(0, historyLimit);
+            // Simple check: IDs of first N items must match
+            // This assumes newExercisesList is the FULL list
+            const currentOrder = state.session.exerciseOrder;
 
-            const isHistoryIntact = oldHistory.every((ex, i) => ex.exerciseId === newHistoryCandidate[i]?.exerciseId);
-
-            if (!isHistoryIntact) {
-                return state; // Reject history modification
+            for (let i = 0; i < activeExerciseIndex; i++) {
+                if (newExercisesList[i]?.exerciseId !== currentOrder[i]) return state;
             }
 
-            // Accept change.
-            // Active Index stays fixed.
+            // Re-normalize
+            const newDict: Record<string, ExerciseSession> = {};
+            const newOrder: string[] = [];
+
+            newExercisesList.forEach(ex => {
+                newDict[ex.exerciseId] = ex;
+                newOrder.push(ex.exerciseId);
+            });
 
             return {
                 ...state,
-                session: { ...state.session, exercises: newExercises }
+                session: {
+                    ...state.session,
+                    exercises: newDict,
+                    exerciseOrder: newOrder
+                }
             };
         }
 
         case 'MOVE_GROUP': {
             if (!state.session) return state;
             const { group, direction } = action.payload;
-            const allExercises = state.session.exercises;
+            const { exerciseOrder, exercises } = state.session;
 
-            // 1. Identify "movable" History (Skipped Items ONLY)
-            // We want to pull skipped items out of history if they belong to the group being moved,
-            // so they don't get left behind creating a "Phantom" group.
-            let adjustedActiveIndex = state.activeExerciseIndex;
-            const consolidatedExercises = [...allExercises];
+            // 1. Identify "Fluid" items
+            // "Real History" = items before active index with sets > 0
 
-            // Optimization: Only scan if we suspect fragmentation? 
-            // Or just always try to consolidate 'skipped' items of the target group?
+            // Logic: Split order into [History] and [Fluid]
+            // We can't move history. We only reorder the Fluid part.
 
-            // Strategy: Filter history for skipped items of this group
-            // If found, move them to the START of the pending zone ??
-            // OR just rebuild the list.
+            // If active index separates history, we just slice?
+            // BUT skipped items in history might be movable? 
+            // Simplifying: Assume strict history = 0 to activeIndex-1.
 
-            // Let's protect "Real History" (Completed with sets)
-            // Everything else is fluid.
-
-            const realHistory: ExerciseSession[] = [];
-            const fluidItems: ExerciseSession[] = [];
-
-            for (let i = 0; i < allExercises.length; i++) {
-                const ex = allExercises[i];
-                // "Real History" = Completed (sets > 0) AND index < activeIndex
-                // Wait, if index < activeIndex but sets=0 (Skipped), it is Fluid.
-                if (i < state.activeExerciseIndex && ex.sets.length > 0) {
-                    realHistory.push(ex);
-                } else {
-                    // Reset 'skipped' status when moving items back into play
-                    const pendingEx = { ...ex };
-                    if (pendingEx.skipped) {
-                        delete pendingEx.skipped;
-                    }
-                    fluidItems.push(pendingEx);
-                }
-            }
-
-            // Recalculate Active Index relative to Fluid Start
-            // The new "Active" item will depend on how we shuffle fluid items.
-            // Actually, we just want to GROUP fluid items.
+            const historyIds = exerciseOrder.slice(0, state.activeExerciseIndex);
+            const fluidIds = exerciseOrder.slice(state.activeExerciseIndex);
 
             // 2. Group Fluid Items
-            const groups: { group: string, items: ExerciseSession[] }[] = [];
+            const groups: { group: string, ids: string[] }[] = [];
             let currentGroup: string | null = null;
-            let currentBlock: ExerciseSession[] = [];
+            let currentBlock: string[] = [];
 
-            fluidItems.forEach((ex) => {
-                const def = getExerciseById(ex.exerciseId);
-                const g = def ? def.muscleGroup : 'Unknown';
+            fluidIds.forEach(id => {
+                const def = getExerciseById(id);
+                const g = def?.muscleGroup ?? 'Unknown';
 
                 if (g !== currentGroup) {
-                    if (currentGroup !== null) {
-                        groups.push({ group: currentGroup, items: currentBlock });
-                    }
+                    if (currentGroup !== null) groups.push({ group: currentGroup, ids: currentBlock });
                     currentGroup = g;
-                    currentBlock = [ex];
+                    currentBlock = [id];
                 } else {
-                    currentBlock.push(ex);
+                    currentBlock.push(id);
                 }
             });
-            if (currentGroup !== null) {
-                groups.push({ group: currentGroup, items: currentBlock });
-            }
+            if (currentGroup !== null) groups.push({ group: currentGroup, ids: currentBlock });
 
             const groupIndex = groups.findIndex(g => g.group === group);
             if (groupIndex === -1) return state;
@@ -371,18 +365,19 @@ export const activeWorkoutReducer = (state: ActiveWorkoutState, action: ActiveWo
             }
 
             // 4. Reconstruct
-            const newFluid = groups.flatMap(g => g.items);
-            const finalExercises = [...realHistory, ...newFluid];
+            const newFluidIds = groups.flatMap(g => g.ids);
+            const newOrder = [...historyIds, ...newFluidIds];
 
-            // 5. Determine New Active Index
-            // The active index should point to the FIRST item in "newFluid" usually,
-            // UNLESS the user dragged "Active" thing down?
-            // "Active" is effectively the first item of Fluid list.
-            // So:
+            // Active index remains same value (pointing to start of fluid)
+            // unless we did something fancy with skipped items, 
+            // but here we just reordered the future.
+
             return {
                 ...state,
-                activeExerciseIndex: realHistory.length,
-                session: { ...state.session, exercises: finalExercises }
+                session: {
+                    ...state.session,
+                    exerciseOrder: newOrder
+                }
             };
         }
 

@@ -18,6 +18,7 @@ export const SetTracker = React.memo(function SetTracker() {
 
     const currentSetNumber = (activeSession?.sets.length || 0) + 1;
     const targetSets = activeSession?.targetSets || 4;
+    const isExtraSet = currentSetNumber > targetSets;
 
     const handleIncrement = (type: 'weight' | 'reps', amount: number) => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -47,6 +48,10 @@ export const SetTracker = React.memo(function SetTracker() {
         }, 500);
     };
 
+    const setDisplayText = isExtraSet
+        ? `${currentSetNumber}ª Série (Bônus!)`
+        : `Série ${currentSetNumber} de ${targetSets}`;
+
     return (
         <View style={styles.card}>
 
@@ -54,7 +59,7 @@ export const SetTracker = React.memo(function SetTracker() {
                 <View style={styles.tag}>
                     <Text style={styles.tagText}>FOCO</Text>
                 </View>
-                <Text style={styles.setTitle}>Série {currentSetNumber} de {targetSets}</Text>
+                <Text style={styles.setTitle}>{setDisplayText}</Text>
                 <View style={styles.historyContainer}>
                     <Text style={styles.historyLabel}>ANTERIOR</Text>
                     <Text style={styles.historyValue}>32kg x 10</Text>

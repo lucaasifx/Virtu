@@ -1,12 +1,10 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
+import { StyleSheet, View } from 'react-native';
 import { WorkoutCountdown } from '@/components/features/Workout/Countdown/WorkoutCountdown';
 
 export default function FinishSelectionScreen() {
     return (
         <View style={styles.container}>
-            <StatusBar style="light" translucent backgroundColor="transparent" />
             <WorkoutCountdown />
         </View>
     );
