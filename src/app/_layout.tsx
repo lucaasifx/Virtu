@@ -11,6 +11,7 @@ import { ThemeFonts } from "@/src/constants/theme";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ActiveWorkoutProvider } from "@/src/context/ActiveWorkoutContext";
 import { WorkoutProvider, useWorkoutCreation } from "@/src/context/WorkoutContext";
+import { GamificationProvider } from "@/src/context/GamificationContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -66,14 +67,16 @@ export default function RootLayout() {
         translucent
         backgroundColor="transparent"
       />
-      <WorkoutProvider>
-        <ActiveWorkoutBridge>
-          <Stack screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="index" />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          </Stack>
-        </ActiveWorkoutBridge>
-      </WorkoutProvider>
+      <GamificationProvider>
+        <WorkoutProvider>
+          <ActiveWorkoutBridge>
+            <Stack screenOptions={{ headerShown: false }}>
+              <Stack.Screen name="index" />
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            </Stack>
+          </ActiveWorkoutBridge>
+        </WorkoutProvider>
+      </GamificationProvider>
     </GestureHandlerRootView>
   );
 }

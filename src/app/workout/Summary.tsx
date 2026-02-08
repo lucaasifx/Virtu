@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, Image, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Colors, Spacing } from '@/src/constants/theme';
@@ -7,6 +7,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { SummaryPhotoOptions } from '@/components/features/Workout/Summary/SummaryPhotoOptions';
+import { useGamification } from '@/src/context/GamificationContext';
+import { XPGainPopup } from '@/components/features/Gamification/XPGainPopup';
+import { LevelUpModal } from '@/components/features/Gamification/LevelUpModal';
+import { LevelInfo } from '@/src/types/gamification';
 
 export default function WorkoutSummaryScreen() {
     const params = useLocalSearchParams();
@@ -14,13 +18,39 @@ export default function WorkoutSummaryScreen() {
     const [image, setImage] = useState<string | null>(null);
     const [showPhotoOptions, setShowPhotoOptions] = useState(false);
 
+    const { state, recordWorkoutComplete } = useGamification();
+    const [xpEarned, setXpEarned] = useState(0);
+    const [showXPPopup, setShowXPPopup] = useState(false);
+    const [levelUp, setLevelUp] = useState<LevelInfo | null>(null);
+    const hasRecorded = useRef(false);
+
     const duration = parseInt(params.duration as string || '0');
     const volume = parseInt(params.volume as string || '0');
+    const totalSets = parseInt(params.totalSets as string || '0');
 
-    // Mock Data for "History" until we have persistence
-    const streakDays = 12;
+    useEffect(() => {
+        if (!hasRecorded.current) {
+            hasRecorded.current = true;
+            console.log('[Summary] Recording workout...');
+            const result = recordWorkoutComplete({
+                totalSets,
+                isPR: false,
+                isFirstWorkout: state.xpHistory.length === 0,
+            });
+            console.log('[Summary] XP earned:', result.xpEarned, 'Level up:', result.levelUp);
+            setXpEarned(result.xpEarned);
+            if (result.levelUp) {
+                setLevelUp(result.levelUp);
+            }
+            setTimeout(() => {
+                console.log('[Summary] Setting showXPPopup to true');
+                setShowXPPopup(true);
+            }, 800);
+        }
+    }, []);
 
-    // Format Duration elegantly (1h 20m)
+    const streakDays = state.streak;
+
     const formatDuration = (secs: number) => {
         const h = Math.floor(secs / 3600);
         const m = Math.floor((secs % 3600) / 60);
@@ -30,7 +60,6 @@ export default function WorkoutSummaryScreen() {
 
     const handleFinish = () => {
         router.dismissAll();
-        // @ts-ignore
         router.replace('/(tabs)/Home');
     };
 
@@ -38,9 +67,7 @@ export default function WorkoutSummaryScreen() {
         if (image) {
             setShowPhotoOptions(true);
         } else {
-            setShowPhotoOptions(true); // Open options even if empty? Or just camera? 
-            // User requested "customizar a caixa de diálogo". 
-            // Let's open options for both cases to give choice (Camera vs Library)
+            setShowPhotoOptions(true);
         }
     };
 
@@ -94,14 +121,12 @@ export default function WorkoutSummaryScreen() {
             <SafeAreaView style={styles.safeArea}>
                 <View style={styles.content}>
 
-                    {/* 1. Header: V9 Balanced */}
                     <Animated.View entering={FadeInDown.delay(200)} style={styles.header}>
                         <Text style={styles.title}>TREINO</Text>
                         <Text style={[styles.title, styles.titleSubtitle]}>CONCLUÍDO</Text>
                         <Text style={styles.date}>{new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase()}</Text>
                     </Animated.View>
 
-                    {/* 2. Hero: V9 Balanced Frame (Increased Margins) */}
                     <Animated.View entering={ZoomIn.delay(400).springify()} style={styles.photoContainer}>
                         <TouchableOpacity style={styles.photoFrame} onPress={handlePhotoPress} activeOpacity={0.9}>
                             {image ? (
@@ -118,11 +143,9 @@ export default function WorkoutSummaryScreen() {
                         </TouchableOpacity>
                     </Animated.View>
 
-                    {/* 3. Stats: Overlapping Sticker */}
                     <Animated.View entering={FadeInUp.delay(600).springify()} style={styles.statsWrapper}>
                         <View style={styles.statsContainer}>
 
-                            {/* Days Active */}
                             <View style={styles.statItem}>
                                 <Text style={styles.statLabel}>SEQUÊNCIA</Text>
                                 <View style={styles.statValueRow}>
@@ -133,7 +156,6 @@ export default function WorkoutSummaryScreen() {
 
                             <View style={styles.divider} />
 
-                            {/* Duration */}
                             <View style={styles.statItem}>
                                 <Text style={styles.statLabel}>TEMPO</Text>
                                 <View style={styles.statValueRow}>
@@ -144,7 +166,6 @@ export default function WorkoutSummaryScreen() {
 
                             <View style={styles.divider} />
 
-                            {/* Volume */}
                             <View style={styles.statItem}>
                                 <Text style={styles.statLabel}>VOLUME</Text>
                                 <View style={styles.statValueRow}>
@@ -156,10 +177,8 @@ export default function WorkoutSummaryScreen() {
                         </View>
                     </Animated.View>
 
-                    {/* Footer: V9 Intense Branding */}
                     <View style={styles.footer}>
 
-                        {/* Branding Badge: BLACK & BOLD */}
                         <View style={styles.brandingContainer}>
                             <MaterialCommunityIcons name="lightning-bolt" size={22} color="#000000" />
                             <Text style={styles.brandingText}>VIRTU APP</Text>
@@ -187,6 +206,20 @@ export default function WorkoutSummaryScreen() {
                 onRemovePhoto={removePhoto}
                 hasPhoto={!!image}
             />
+
+            <XPGainPopup
+                amount={xpEarned}
+                visible={showXPPopup}
+                onComplete={() => setShowXPPopup(false)}
+            />
+
+            {levelUp && (
+                <LevelUpModal
+                    visible={!!levelUp}
+                    levelInfo={levelUp}
+                    onClose={() => setLevelUp(null)}
+                />
+            )}
         </View>
     );
 }
@@ -194,7 +227,7 @@ export default function WorkoutSummaryScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: Colors.primary, // Yellow Base
+        backgroundColor: Colors.primary,
     },
     safeArea: {
         flex: 1,
@@ -203,7 +236,7 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingHorizontal: Spacing.md,
         justifyContent: 'space-between',
-        paddingVertical: Spacing.md, // V9: Balanced vertical padding (was sm in V8)
+        paddingVertical: Spacing.md,
     },
     header: {
         alignItems: 'center',
@@ -234,13 +267,12 @@ const styles = StyleSheet.create({
         letterSpacing: 2,
     },
 
-    // Photo Container: V9 (More margin = smaller frame)
     photoContainer: {
         flex: 1,
-        marginBottom: Spacing.lg, // Increased from sm (V8) to pull frame up/shrink it
+        marginBottom: Spacing.lg,
         marginTop: Spacing.md,
         zIndex: 1,
-        paddingHorizontal: Spacing.xs, // Slight padding to narrow it
+        paddingHorizontal: Spacing.xs,
     },
     photoFrame: {
         flex: 1,
@@ -277,13 +309,12 @@ const styles = StyleSheet.create({
         marginTop: 4,
     },
 
-    // STATS
     statsWrapper: {
         width: '100%',
         zIndex: 100,
-        marginTop: -60, // Deep overlap
+        marginTop: -60,
         paddingHorizontal: Spacing.sm,
-        marginBottom: Spacing.lg, // More breathing room
+        marginBottom: Spacing.lg,
     },
     statsContainer: {
         flexDirection: 'row',
@@ -336,20 +367,19 @@ const styles = StyleSheet.create({
         paddingBottom: Spacing.md,
     },
 
-    // BRANDING V9: BOLD
     brandingContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        opacity: 1, // Full visibility
+        opacity: 1,
         marginBottom: Spacing.xs,
     },
     brandingText: {
-        fontFamily: 'Montserrat-Black', // Thickest font available
-        fontSize: 20, // Bigger
-        color: '#000000', // Solid Black
+        fontFamily: 'Montserrat-Black',
+        fontSize: 20,
+        color: '#000000',
         marginLeft: 6,
         letterSpacing: 1,
-        fontStyle: 'italic', // Match title
+        fontStyle: 'italic',
     },
     shareButton: {
         width: '100%',
