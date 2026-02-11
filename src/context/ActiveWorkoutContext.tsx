@@ -229,23 +229,34 @@ export function ActiveWorkoutProvider({ children, onWorkoutEnd }: ActiveWorkoutP
             });
         });
 
+        // Sync to Supabase in BACKGROUND (non-blocking)
+        import('@/src/lib/workoutSyncService').then(({ syncWorkoutToSupabase }) => {
+            syncWorkoutToSupabase(currentSession, duration, totalVolume)
+                .then(result => console.log('[Workout] Background sync:', result.success ? '✅' : '❌', result.error || ''))
+                .catch(e => console.error('[Workout] Background sync error:', e));
+        });
+
         onWorkoutEnd?.();
         sessionRef.current = null;
         activeIndexRef.current = 0;
         setSession(null);
 
+        // Navigate immediately (don't wait for sync)
         router.replace({
             pathname: '/workout/Summary',
             params: {
                 duration: duration.toString(),
                 volume: totalVolume.toString(),
                 sets: totalSets.toString(),
-                date: endTime.toISOString()
+                date: endTime.toISOString(),
             }
         });
     }, [onWorkoutEnd]);
 
+
+
     const cancelWorkout = useCallback(() => {
+        console.log('[Workout] ❌ Treino cancelado');
         onWorkoutEnd?.();
         sessionRef.current = null;
         activeIndexRef.current = 0;

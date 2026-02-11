@@ -1,9 +1,8 @@
 import React from "react";
-import { View, StyleSheet, TouchableOpacity } from "react-native";
+import { View, StyleSheet } from "react-native";
 import { ThemedText as Text } from "@/components/ui/ThemedText";
 import { Colors, FontFamily } from "@/src/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
 import { WorkoutDTO } from "@/src/types/workout";
 
 const formatDuration = (seconds?: number) => {
@@ -40,11 +39,7 @@ interface SessionCardProps {
 
 export function WorkoutSessionCard({ workout }: SessionCardProps) {
     return (
-        <TouchableOpacity
-            style={styles.sessionCard}
-            activeOpacity={0.7}
-            onPress={() => router.push("/workout/Selection")}
-        >
+        <View style={styles.sessionCard}>
             <View style={styles.sessionIcon}>
                 <Ionicons name="barbell" size={20} color={Colors.primary} />
             </View>
@@ -57,7 +52,7 @@ export function WorkoutSessionCard({ workout }: SessionCardProps) {
             </View>
 
             <Ionicons name="chevron-forward" size={20} color={Colors.gray[200]} />
-        </TouchableOpacity>
+        </View>
     );
 }
 
