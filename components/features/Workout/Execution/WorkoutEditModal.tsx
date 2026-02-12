@@ -16,7 +16,7 @@ export function WorkoutEditModal({ visible, onClose }: WorkoutEditModalProps) {
 
     if (!session) return null;
 
-    const exercises = session.exercises;
+
 
     return (
         <Modal
@@ -37,12 +37,13 @@ export function WorkoutEditModal({ visible, onClose }: WorkoutEditModalProps) {
                     </View>
 
                     <ScrollView style={styles.list}>
-                        {exercises.map((exSession, index) => {
-                            const exerciseDef = getExerciseById(exSession.exerciseId);
+                        {session.exerciseOrder.map((exerciseId, index) => {
+                            const exSession = session.exercises[exerciseId];
+                            const exerciseDef = getExerciseById(exerciseId);
                             if (!exerciseDef) return null;
 
                             return (
-                                <View key={exSession.exerciseId + index} style={styles.item}>
+                                <View key={exerciseId} style={styles.item}>
                                     <View style={styles.itemInfo}>
                                         <Text style={styles.itemNumber}>{index + 1}</Text>
                                         <Text style={styles.itemName} numberOfLines={1}>{exerciseDef.name}</Text>
@@ -50,7 +51,7 @@ export function WorkoutEditModal({ visible, onClose }: WorkoutEditModalProps) {
 
                                     <TouchableOpacity
                                         style={styles.deleteButton}
-                                        onPress={() => removeExercise(exSession.exerciseId)}
+                                        onPress={() => removeExercise(exerciseId)}
                                     >
                                         <Ionicons name="trash-outline" size={20} color={Colors.error} />
                                     </TouchableOpacity>

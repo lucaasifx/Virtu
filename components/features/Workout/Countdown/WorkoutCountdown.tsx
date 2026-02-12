@@ -5,7 +5,6 @@ import Animated, {
     useAnimatedStyle,
     interpolate
 } from 'react-native-reanimated';
-import { StatusBar } from 'expo-status-bar';
 import { useRouter } from 'expo-router';
 import { useActiveWorkout } from '@/src/context/ActiveWorkoutContext';
 import { useWorkoutCreation } from '@/src/context/WorkoutContext';
@@ -45,16 +44,12 @@ export function WorkoutCountdown() {
 
     if (phase === 'completed') {
         return (
-            <View style={styles.container}>
-                <StatusBar style="light" translucent backgroundColor="transparent" />
-            </View>
+            <View style={styles.container} />
         );
     }
 
     return (
         <View style={styles.container}>
-            <StatusBar style="light" translucent backgroundColor="transparent" />
-
             <CountdownBackground />
 
             <Animated.View style={[styles.transitionCircle, finalCircleStyle]} />

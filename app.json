@@ -18,7 +18,8 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.lucaasifx.virtu",
     },
     "web": {
       "output": "static",
@@ -50,6 +51,17 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": false
+    },
+    "extra": {
+      "router": {},
+      "expo-navigation-bar": {
+        "position": "absolute",
+        "backgroundColor": "#00000000",
+        "barStyle": "dark-content"
+      },
+      "eas": {
+        "projectId": "9b97c587-e83c-4055-a1b2-63e660b012db"
+      }
     }
   }
 }

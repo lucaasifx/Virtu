@@ -31,11 +31,26 @@ export function MuscleGroupSection({
     isLastGroup
 }: MuscleGroupSectionProps) {
 
+    const groupNameMap: Record<string, string> = {
+        CHEST: 'Peito',
+        BACK: 'Costas',
+        LEGS: 'Pernas',
+        SHOULDERS: 'Ombros',
+        BICEPS: 'Bíceps',
+        TRICEPS: 'Tríceps',
+        ABS: 'Abdômen',
+        CARDIO: 'Cardio',
+        FULL_BODY: 'Full Body',
+        OTHER: 'Outros'
+    };
+
+    const groupDisplayName = groupNameMap[group] || group;
+
     const header = (
         <View style={styles.headerItemContainer}>
             <View style={styles.headerTitleContainer}>
                 <MaterialCommunityIcons name="format-list-bulleted-type" size={14} color={Colors.primary} />
-                <Text style={styles.headerTitle}>{group.toUpperCase()}</Text>
+                <Text style={styles.headerTitle}>{groupDisplayName.toUpperCase()}</Text>
             </View>
 
             <View style={styles.headerControls}>

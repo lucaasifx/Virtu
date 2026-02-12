@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
 import { ThemedText as Text } from "@/components/ui/ThemedText";
 import { Colors, Spacing } from "@/src/constants/theme";
@@ -10,6 +10,7 @@ import Animated, {
     withSpring,
     withTiming
 } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 
 interface RpeSliderProps {
     value: number;
@@ -19,6 +20,16 @@ interface RpeSliderProps {
 const SLIDER_WIDTH = Dimensions.get('window').width - (Spacing.lg * 2) - 40;
 const KNOB_SIZE = 34;
 
+const triggerRpeHaptic = (rpe: number) => {
+    if (rpe <= 3) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } else if (rpe <= 6) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } else {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    }
+};
+
 export function RpeSlider({ value, onValueChange }: RpeSliderProps) {
     const translateX = useSharedValue(0);
     const startX = useSharedValue(0);
@@ -26,6 +37,15 @@ export function RpeSlider({ value, onValueChange }: RpeSliderProps) {
     const MAX_X = SLIDER_WIDTH;
 
     const [isDragging, setIsDragging] = React.useState(false);
+    const lastHapticValue = useRef(value);
+
+    const handleValueChange = (newRpe: number) => {
+        if (newRpe !== lastHapticValue.current) {
+            lastHapticValue.current = newRpe;
+            triggerRpeHaptic(newRpe);
+        }
+        onValueChange(newRpe);
+    };
 
     const pan = Gesture.Pan()
         .activeOffsetX([-10, 10])
@@ -44,7 +64,7 @@ export function RpeSlider({ value, onValueChange }: RpeSliderProps) {
             const rpe = Math.round((nextX / MAX_X) * 10);
             const clampedRpe = Math.max(1, rpe);
 
-            runOnJS(onValueChange)(clampedRpe);
+            runOnJS(handleValueChange)(clampedRpe);
         })
         .onFinalize(() => {
             isPressed.value = false;
@@ -125,7 +145,7 @@ const styles = StyleSheet.create({
     value: {
         fontSize: 32,
         fontWeight: 'bold',
-        color: '#000000', // Black as requested
+        color: '#000000',
         fontFamily: 'Montserrat_800ExtraBold',
     },
     sliderContainer: {

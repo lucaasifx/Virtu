@@ -1,11 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Pressable } from 'react-native';
+import { RectButton } from 'react-native-gesture-handler';
 import { ThemedText as Text } from "@/components/ui/ThemedText";
 import { Colors, Spacing } from "@/src/constants/theme";
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { RpeSlider } from './RpeSlider';
 import { useActiveWorkout } from '@/src/context/ActiveWorkoutContext';
 import * as Haptics from 'expo-haptics';
+import Animated, {
+    useSharedValue,
+    useAnimatedStyle,
+    withSequence,
+    withTiming,
+    withSpring,
+    runOnJS,
+} from 'react-native-reanimated';
+
+const XP_PER_SET = 10;
+const XP_BONUS_SET = 15;
 
 export const SetTracker = React.memo(function SetTracker() {
     const { getActiveExercise, logSet } = useActiveWorkout();
@@ -15,9 +27,14 @@ export const SetTracker = React.memo(function SetTracker() {
     const [reps, setReps] = useState(12);
     const [rpe, setRpe] = useState(8);
 
-
     const currentSetNumber = (activeSession?.sets.length || 0) + 1;
     const targetSets = activeSession?.targetSets || 4;
+    const isExtraSet = currentSetNumber > targetSets;
+
+    const [showXP, setShowXP] = useState(false);
+    const xpOpacity = useSharedValue(0);
+    const xpTranslateY = useSharedValue(0);
+    const xpScale = useSharedValue(0.5);
 
     const handleIncrement = (type: 'weight' | 'reps', amount: number) => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -32,6 +49,38 @@ export const SetTracker = React.memo(function SetTracker() {
         return () => clearTimeout(timerRef.current);
     }, []);
 
+    const triggerXPAnimation = () => {
+        setShowXP(true);
+        xpOpacity.value = 0;
+        xpTranslateY.value = 0;
+        xpScale.value = 0.5;
+
+        xpScale.value = withSpring(1, { damping: 8, stiffness: 200 });
+        xpOpacity.value = withTiming(1, { duration: 150 });
+
+        xpTranslateY.value = withSequence(
+            withTiming(0, { duration: 800 }),
+            withTiming(-40, { duration: 400 })
+        );
+
+        xpOpacity.value = withSequence(
+            withTiming(1, { duration: 800 }),
+            withTiming(0, { duration: 400 }, (finished) => {
+                if (finished) {
+                    runOnJS(setShowXP)(false);
+                }
+            })
+        );
+    };
+
+    const xpAnimatedStyle = useAnimatedStyle(() => ({
+        opacity: xpOpacity.value,
+        transform: [
+            { translateY: xpTranslateY.value },
+            { scale: xpScale.value },
+        ],
+    }));
+
     const handleFinishSet = () => {
         if (isSubmitting) return;
 
@@ -41,11 +90,18 @@ export const SetTracker = React.memo(function SetTracker() {
 
         logSet(weight, reps, rpe);
 
+        triggerXPAnimation();
 
         timerRef.current = setTimeout(() => {
             setIsSubmitting(false);
         }, 500);
     };
+
+    const setDisplayText = isExtraSet
+        ? `${currentSetNumber}ª Série (Bônus!)`
+        : `Série ${currentSetNumber} de ${targetSets}`;
+
+    const xpAmount = isExtraSet ? XP_BONUS_SET : XP_PER_SET;
 
     return (
         <View style={styles.card}>
@@ -54,7 +110,7 @@ export const SetTracker = React.memo(function SetTracker() {
                 <View style={styles.tag}>
                     <Text style={styles.tagText}>FOCO</Text>
                 </View>
-                <Text style={styles.setTitle}>Série {currentSetNumber} de {targetSets}</Text>
+                <Text style={styles.setTitle}>{setDisplayText}</Text>
                 <View style={styles.historyContainer}>
                     <Text style={styles.historyLabel}>ANTERIOR</Text>
                     <Text style={styles.historyValue}>32kg x 10</Text>
@@ -97,15 +153,23 @@ export const SetTracker = React.memo(function SetTracker() {
 
             <RpeSlider value={rpe} onValueChange={setRpe} />
 
-            <TouchableOpacity
-                style={[styles.finishButton, isSubmitting && { opacity: 0.7 }]}
-                onPress={handleFinishSet}
-                disabled={isSubmitting}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-                <Text style={styles.finishButtonText}>{isSubmitting ? 'SALVANDO...' : 'CONCLUIR SÉRIE'}</Text>
-                {!isSubmitting && <Ionicons name="checkmark" size={24} color={Colors.primary} />}
-            </TouchableOpacity>
+            <View style={styles.buttonContainer}>
+                <RectButton
+                    style={[styles.finishButton, isSubmitting && { opacity: 0.7 }]}
+                    onPress={handleFinishSet}
+                    enabled={!isSubmitting}
+                >
+                    <Text style={styles.finishButtonText}>{isSubmitting ? 'SALVANDO...' : 'CONCLUIR SÉRIE'}</Text>
+                    {!isSubmitting && <Ionicons name="checkmark" size={24} color={Colors.primary} />}
+                </RectButton>
+
+                {showXP && (
+                    <Animated.View style={[styles.xpBadge, xpAnimatedStyle]}>
+                        <MaterialCommunityIcons name="arrow-up-bold" size={16} color="#000" />
+                        <Text style={styles.xpBadgeText}>+{xpAmount} XP</Text>
+                    </Animated.View>
+                )}
+            </View>
         </View>
     );
 });
@@ -216,5 +280,30 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: 'bold',
         letterSpacing: 0.5,
-    }
+    },
+    buttonContainer: {
+        position: 'relative',
+    },
+    xpBadge: {
+        position: 'absolute',
+        top: -10,
+        right: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: Colors.primary,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 12,
+        gap: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 4,
+        elevation: 4,
+    },
+    xpBadgeText: {
+        fontSize: 13,
+        fontWeight: '800',
+        color: '#000000',
+    },
 });

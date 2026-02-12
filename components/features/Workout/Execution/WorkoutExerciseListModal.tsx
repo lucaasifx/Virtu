@@ -22,18 +22,19 @@ interface GroupSectionData {
 }
 
 export function WorkoutExerciseListModal({ visible, onClose }: WorkoutExerciseListModalProps) {
-    const { session, updateExercises, moveGroup, reorderExercises, activeExerciseIndex } = useActiveWorkout();
+    const { session, moveGroup, reorderExercises, activeExerciseIndex } = useActiveWorkout();
     const insets = useSafeAreaInsets();
 
     if (!session) return null;
 
-        const groups = useMemo(() => {
+    const groups = useMemo(() => {
         const result: GroupSectionData[] = [];
         let currentGroup: MuscleGroup | null = null;
         let currentExercises: ExerciseSession[] = [];
         let groupStartIndex = 0;
 
-        session.exercises.forEach((ex, index) => {
+        session.exerciseOrder.forEach((exerciseId, index) => {
+            const ex = session.exercises[exerciseId];
             const def = getExerciseById(ex.exerciseId);
             const group = def?.muscleGroup ?? 'Outros' as MuscleGroup;
 
@@ -62,23 +63,23 @@ export function WorkoutExerciseListModal({ visible, onClose }: WorkoutExerciseLi
         }
 
         return result;
-    }, [session.exercises]);
+    }, [session.exercises, session.exerciseOrder]);
 
     const handleGroupMove = React.useCallback((group: MuscleGroup, direction: 'up' | 'down') => {
         moveGroup(group, direction);
     }, [moveGroup]);
 
     const handleMoveExercise = (exerciseId: string, direction: 'up' | 'down') => {
-        const globalIndex = session.exercises.findIndex(e => e.exerciseId === exerciseId);
+        const globalIndex = session.exerciseOrder.indexOf(exerciseId);
         if (globalIndex === -1) return;
 
         const targetIndex = direction === 'up' ? globalIndex - 1 : globalIndex + 1;
 
-        if (targetIndex < 0 || targetIndex >= session.exercises.length) return;
+        if (targetIndex < 0 || targetIndex >= session.exerciseOrder.length) return;
 
 
-        const exerciseDef = getExerciseById(session.exercises[globalIndex].exerciseId);
-        const targetExerciseDef = getExerciseById(session.exercises[targetIndex].exerciseId);
+        const exerciseDef = getExerciseById(session.exerciseOrder[globalIndex]);
+        const targetExerciseDef = getExerciseById(session.exerciseOrder[targetIndex]);
 
         if (exerciseDef?.muscleGroup !== targetExerciseDef?.muscleGroup) {
             return;
@@ -122,7 +123,7 @@ export function WorkoutExerciseListModal({ visible, onClose }: WorkoutExerciseLi
                                     group={groupData.group}
                                     exercises={groupData.exercises}
                                     activeExerciseIndex={activeExerciseIndex}
-                                    activeExerciseId={session.exercises[activeExerciseIndex]?.exerciseId}
+                                    activeExerciseId={session.exerciseOrder[activeExerciseIndex]}
                                     globalStartIndex={groupData.startIndex}
                                     isFirstGroup={index === 0}
                                     isLastGroup={index === groups.length - 1}

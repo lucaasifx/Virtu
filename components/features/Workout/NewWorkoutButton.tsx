@@ -2,11 +2,17 @@ import { Colors, Spacing } from "@/src/constants/theme";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { View, StyleSheet } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "../../ui/Button";
 
+const TAB_BAR_HEIGHT = 60;
+
 export default function NewWorkoutButton() {
+    const insets = useSafeAreaInsets();
+    const bottomOffset = TAB_BAR_HEIGHT + insets.bottom + Spacing.md;
+
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { bottom: bottomOffset }]}>
             <Button
                 title="INICIAR TREINO"
                 onPress={() => router.push("/workout/Selection")}
@@ -20,7 +26,6 @@ export default function NewWorkoutButton() {
 const styles = StyleSheet.create({
     container: {
         position: 'absolute',
-        bottom: Spacing.lg,
         left: 0,
         right: 0,
         alignItems: 'center',

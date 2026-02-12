@@ -9,9 +9,9 @@ import { getExerciseById } from '@/src/constants/exercises';
 export function UpNextCard() {
     const { session, activeExerciseIndex, nextExercise } = useActiveWorkout();
 
-    if (!session || activeExerciseIndex >= session.exercises.length - 1) return null;
+    if (!session || activeExerciseIndex >= session.exerciseOrder.length - 1) return null;
 
-    const nextExerciseId = session.exercises[activeExerciseIndex + 1].exerciseId;
+    const nextExerciseId = session.exerciseOrder[activeExerciseIndex + 1];
     const nextExerciseDef = getExerciseById(nextExerciseId);
 
     if (!nextExerciseDef) return null;
