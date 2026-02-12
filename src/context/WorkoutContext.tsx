@@ -9,6 +9,8 @@ interface WorkoutContextData {
     resetWorkout: () => void;
     getExercisesForGroup: (group: MuscleGroup) => string[];
     clearExercisesForGroup: (group: MuscleGroup) => void;
+    workoutCategory: string;
+    setWorkoutCategory: (category: string) => void;
 }
 
 const WorkoutContext = createContext<WorkoutContextData | undefined>(undefined);
@@ -16,6 +18,7 @@ const WorkoutContext = createContext<WorkoutContextData | undefined>(undefined);
 export function WorkoutProvider({ children }: { children: ReactNode }) {
     const [selectedGroups, setSelectedGroupsState] = useState<MuscleGroup[]>([]);
     const [selections, setSelections] = useState<Record<MuscleGroup, string[]>>({} as any);
+    const [workoutCategory, setWorkoutCategory] = useState('Hipertrofia');
 
     const setSelectedGroups = (groups: MuscleGroup[]) => {
         setSelectedGroupsState(groups);
@@ -52,6 +55,7 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
     const resetWorkout = () => {
         setSelectedGroupsState([]);
         setSelections({} as any);
+        setWorkoutCategory('Hipertrofia');
     };
 
     const contextValue = React.useMemo(() => ({
@@ -61,8 +65,10 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
         toggleExerciseSelection,
         resetWorkout,
         getExercisesForGroup,
-        clearExercisesForGroup
-    }), [selectedGroups, selections]);
+        clearExercisesForGroup,
+        workoutCategory,
+        setWorkoutCategory
+    }), [selectedGroups, selections, workoutCategory]);
 
     return (
         <WorkoutContext.Provider value={contextValue}>

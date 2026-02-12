@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, StyleSheet, Image, Platform } from 'react-native';
 import { ThemedText as Text } from '@/components/ui/ThemedText';
-import { Colors, Spacing, FontFamily } from '@/src/constants/theme';
-import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
+import { FontFamily } from '@/src/constants/theme';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
 
@@ -34,7 +34,6 @@ export function Header({ stats }: HeaderProps) {
                         <Text style={styles.levelText}>Nível {stats.level}</Text>
                     </View>
 
-                    {/* Right: Profile */}
                     <View style={styles.profileContainer}>
                         <Image
                             source={{ uri: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?q=80&w=1974&auto=format&fit=crop' }}
@@ -43,7 +42,6 @@ export function Header({ stats }: HeaderProps) {
                     </View>
                 </View>
 
-                {/* Absolute Center: Streak (Moved out of topRow to guarantee screen centering) */}
                 <View style={styles.streakContainer}>
                     <View style={styles.streakContent}>
                         <View style={styles.streakTopRow}>
@@ -58,7 +56,6 @@ export function Header({ stats }: HeaderProps) {
                     </View>
                 </View>
 
-                {/* Bottom Row: XP Bar */}
                 <View style={styles.xpSection}>
                     <View style={styles.xpLabels}>
                         <Text style={styles.xpLabel}>PROGRESSO</Text>
@@ -104,7 +101,6 @@ const styles = StyleSheet.create({
         marginBottom: 16,
         position: 'relative',
     },
-    // Level
     levelContainer: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -137,7 +133,6 @@ const styles = StyleSheet.create({
     streakContent: {
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#F9FAFB',
         paddingVertical: 4,
         paddingHorizontal: 16,
         borderRadius: 8,
