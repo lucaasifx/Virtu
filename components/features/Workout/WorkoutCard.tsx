@@ -1,27 +1,27 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ImageSourcePropType } from 'react-native';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FontFamily } from '@/src/constants/theme';
 
 interface Workout {
-    id: number;
+    id: string;
     title: string;
     category: string;
     duration: string;
     exercises: number;
-    intensity: string;
     muscles: string;
-    image: string;
-    calories: string;
+    image: ImageSourcePropType | string;
 }
 
 interface WorkoutCardProps {
     workout: Workout;
     onPress?: () => void;
+    onPlay?: () => void;
+    onEdit?: () => void;
 }
 
-export function WorkoutCard({ workout, onPress }: WorkoutCardProps) {
+export function WorkoutCard({ workout, onPress, onPlay, onEdit }: WorkoutCardProps) {
     return (
         <TouchableOpacity
             activeOpacity={0.95}
@@ -29,11 +29,18 @@ export function WorkoutCard({ workout, onPress }: WorkoutCardProps) {
             onPress={onPress}
         >
             <View style={styles.cardImageContainer}>
-                <Image source={{ uri: workout.image }} style={styles.cardImage} />
+                {typeof workout.image !== 'string' ? (
+                    <Image source={workout.image} style={styles.cardImage} />
+                ) : (
+                    <Image source={{ uri: workout.image }} style={styles.cardImage} />
+                )}
                 <LinearGradient
                     colors={['transparent', 'rgba(17,17,17,0.8)', '#111']}
                     style={StyleSheet.absoluteFillObject}
                 />
+                <TouchableOpacity style={styles.editButton} onPress={onEdit}>
+                    <Ionicons name="create-outline" size={18} color="#111" />
+                </TouchableOpacity>
                 <View style={styles.cardOverlay}>
                     <View style={styles.catBadge}>
                         <Text style={styles.catBadgeText}>{workout.category}</Text>
@@ -66,7 +73,7 @@ export function WorkoutCard({ workout, onPress }: WorkoutCardProps) {
                     </View>
                 </View>
 
-                <TouchableOpacity style={styles.playButton}>
+                <TouchableOpacity style={styles.playButton} onPress={onPlay}>
                     <Ionicons name="play" size={20} color="#111" style={{ marginLeft: 3 }} />
                 </TouchableOpacity>
             </View>
@@ -104,6 +111,18 @@ const styles = StyleSheet.create({
         bottom: 0,
         padding: 24,
         justifyContent: 'space-between',
+    },
+    editButton: {
+        position: 'absolute',
+        top: 16,
+        right: 16,
+        width: 36,
+        height: 36,
+        borderRadius: 10,
+        backgroundColor: '#FDCB13',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 20,
     },
     catBadge: {
         backgroundColor: '#FDCB13',

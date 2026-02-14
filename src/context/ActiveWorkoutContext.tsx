@@ -114,6 +114,9 @@ export function ActiveWorkoutProvider({ children, onWorkoutEnd }: ActiveWorkoutP
     }, [session, isPaused]);
 
     const startWorkout = useCallback((exerciseIds: string[], groups: MuscleGroup[]) => {
+        if (exerciseIds.length === 0 || groups.length === 0) {
+            return;
+        }
         const newSession = createWorkoutSession(exerciseIds, groups);
 
         sessionRef.current = newSession;

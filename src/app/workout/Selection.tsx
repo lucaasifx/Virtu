@@ -1,7 +1,7 @@
 import React from "react";
 import { View, StyleSheet, FlatList, TouchableOpacity, Text } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { Stack, router } from "expo-router";
+import { Stack, router, useLocalSearchParams } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { Colors, FontFamily } from "@/src/constants/theme";
 import { MuscleGroup } from "@/src/types/workout";
@@ -15,13 +15,26 @@ const FORM_CATEGORIES = ['Hipertrofia', 'Força', 'Cardio', 'Funcional'];
 
 export default function SelectionScreen() {
     const insets = useSafeAreaInsets();
+    const params = useLocalSearchParams<{ mode?: string; routineId?: string }>();
+    const isRoutineEditMode = params.mode === 'editRoutine';
     const {
         selectedGroups,
         setSelectedGroups,
         clearExercisesForGroup,
         workoutCategory,
-        setWorkoutCategory
+        setWorkoutCategory,
+        startRoutineEdit,
     } = useWorkoutCreation();
+
+    React.useEffect(() => {
+        if (!isRoutineEditMode || !params.routineId) {
+            return;
+        }
+        const found = startRoutineEdit(params.routineId);
+        if (!found) {
+            router.replace('/(tabs)/Workout');
+        }
+    }, [isRoutineEditMode, params.routineId, startRoutineEdit]);
 
     const onToggle = React.useCallback((group: MuscleGroup) => {
         if (selectedGroups.includes(group)) {
@@ -45,7 +58,13 @@ export default function SelectionScreen() {
 
     const handleNext = () => {
         if (selectedGroups.length > 0)
-            router.push({ pathname: "/workout/ExerciseSelection", params: { groupIndex: 0 } });
+            router.push({
+                pathname: "/workout/ExerciseSelection",
+                params: {
+                    groupIndex: 0,
+                    ...(isRoutineEditMode ? { mode: 'editRoutine', routineId: params.routineId } : {})
+                }
+            });
     };
 
     const handleBack = () => {
@@ -64,7 +83,7 @@ export default function SelectionScreen() {
                     >
                         <Feather name="arrow-left" size={24} color="#000" />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>Criar Rotina</Text>
+                    <Text style={styles.headerTitle}>{isRoutineEditMode ? 'Editar Rotina' : 'Criar Rotina'}</Text>
                 </View>
 
                 <FlatList
@@ -90,7 +109,7 @@ export default function SelectionScreen() {
 
                 <View style={[styles.footer, { paddingBottom: 24 + insets.bottom }]}>
                     <WorkoutActionButton
-                        title="AVANÇAR"
+                        title={isRoutineEditMode ? "CONTINUAR EDIÇÃO" : "AVANÇAR"}
                         onPress={handleNext}
                         disabled={selectedGroups.length === 0}
                     />

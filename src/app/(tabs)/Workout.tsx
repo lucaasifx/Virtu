@@ -16,48 +16,40 @@ import { WorkoutCard } from '@/components/features/Workout/WorkoutCard';
 import { WorkoutHeader } from '@/components/features/Workout/WorkoutHeader';
 import { Colors, FontFamily } from '@/src/constants/theme';
 import Animated, { FadeInDown, ZoomIn } from 'react-native-reanimated';
+import { useWorkoutCreation } from '@/src/context/WorkoutContext';
 
-// --- TYPES & MOCKS ---
-const CATEGORIES = ['Todos', 'Hipertrofia', 'Força', 'Cardio'];
-
-const INITIAL_WORKOUTS = [
-    {
-        id: 1,
-        title: 'Peitoral & Tríceps',
-        category: 'Hipertrofia',
-        duration: '55 min',
-        exercises: 7,
-        intensity: 'Alta',
-        muscles: 'Peitoral • Tríceps • Ombro',
-        image: 'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?q=80&w=2070&auto=format&fit=crop',
-        calories: '450'
-    },
-    {
-        id: 2,
-        title: 'Costas & Bíceps',
-        category: 'Força',
-        duration: '65 min',
-        exercises: 6,
-        intensity: 'Extrema',
-        muscles: 'Dorsal • Bíceps • Antebraço',
-        image: 'https://images.unsplash.com/photo-1605296867304-46d5465a13f1?q=80&w=2070&auto=format&fit=crop',
-        calories: '520'
-    },
-];
+const BASE_CATEGORIES = ['Todos', 'Hipertrofia', 'Força', 'Cardio', 'Funcional'];
 
 export default function Workout() {
     const insets = useSafeAreaInsets();
     const { state, xpProgress, levelInfo } = useGamification();
+    const { routines, queueRoutineStart, startRoutineEdit } = useWorkoutCreation();
     const [activeCategory, setActiveCategory] = useState('Todos');
-    const [workouts] = useState(INITIAL_WORKOUTS);
+    const categories = React.useMemo(() => {
+        const dynamicCategories = Array.from(new Set(routines.map(routine => routine.category)));
+        return Array.from(new Set([...BASE_CATEGORIES, ...dynamicCategories]));
+    }, [routines]);
 
     const filteredWorkouts = activeCategory === 'Todos'
-        ? workouts
-        : workouts.filter(w => w.category === activeCategory);
+        ? routines
+        : routines.filter(w => w.category === activeCategory);
     const isEmptyCategory = filteredWorkouts.length === 0;
 
     const handleCreateRoutine = () => {
         router.push('/workout/Selection');
+    };
+
+    const handlePlayRoutine = (routineId: string) => {
+        queueRoutineStart(routineId);
+        router.push({ pathname: '/workout/FinishSelection', params: { routineId } });
+    };
+
+    const handleEditRoutine = (routineId: string) => {
+        const loaded = startRoutineEdit(routineId);
+        if (!loaded) {
+            return;
+        }
+        router.push({ pathname: '/workout/Selection', params: { mode: 'editRoutine', routineId } });
     };
 
     return (
@@ -76,14 +68,27 @@ export default function Workout() {
                 <WorkoutHeader />
 
                 <CategorySelector
-                    categories={CATEGORIES}
+                    categories={categories}
                     activeCategory={activeCategory}
                     onSelectCategory={setActiveCategory}
                 />
 
                 <View style={styles.cardsContainer}>
                     {filteredWorkouts.map((workout) => (
-                        <WorkoutCard key={workout.id} workout={workout} />
+                        <WorkoutCard
+                            key={workout.id}
+                            workout={{
+                                id: workout.id,
+                                title: workout.title,
+                                category: workout.category,
+                                duration: `${workout.estimatedMinutes} min`,
+                                exercises: workout.exerciseCount,
+                                muscles: workout.musclesLabel,
+                                image: workout.image,
+                            }}
+                            onPlay={() => handlePlayRoutine(workout.id)}
+                            onEdit={() => handleEditRoutine(workout.id)}
+                        />
                     ))}
 
                     {isEmptyCategory && (

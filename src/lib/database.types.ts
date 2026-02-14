@@ -116,6 +116,39 @@ export interface Database {
                 }
                 Relationships: []
             }
+            workout_routines: {
+                Row: {
+                    id: string
+                    user_id: string
+                    title: string
+                    category: string
+                    muscle_groups: string[]
+                    exercise_ids: string[]
+                    cover_muscle_group: string
+                    created_at: string
+                    updated_at: string
+                }
+                Insert: {
+                    id?: string
+                    user_id: string
+                    title: string
+                    category?: string
+                    muscle_groups?: string[]
+                    exercise_ids?: string[]
+                    cover_muscle_group?: string
+                    created_at?: string
+                    updated_at?: string
+                }
+                Update: {
+                    title?: string
+                    category?: string
+                    muscle_groups?: string[]
+                    exercise_ids?: string[]
+                    cover_muscle_group?: string
+                    updated_at?: string
+                }
+                Relationships: []
+            }
         }
         Views: {
             [_ in never]: never

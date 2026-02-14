@@ -5,7 +5,7 @@ import Animated, {
     useAnimatedStyle,
     interpolate
 } from 'react-native-reanimated';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useActiveWorkout } from '@/src/context/ActiveWorkoutContext';
 import { useWorkoutCreation } from '@/src/context/WorkoutContext';
 import { useCountdownController } from '@/src/hooks/workout/useCountdownController';
@@ -18,8 +18,9 @@ const MAX_RADIUS = Math.sqrt(width * width + height * height);
 export function WorkoutCountdown() {
     const { count, phase, circleScale, contentOpacity } = useCountdownController();
     const router = useRouter();
+    const params = useLocalSearchParams<{ routineId?: string }>();
     const { startWorkout } = useActiveWorkout();
-    const { selectedGroups, selections } = useWorkoutCreation();
+    const { selectedGroups, selections, pendingStartRoutine, clearPendingStartRoutine, getRoutineById } = useWorkoutCreation();
 
     const finalCircleStyle = useAnimatedStyle(() => {
         return {
@@ -35,11 +36,23 @@ export function WorkoutCountdown() {
 
     useEffect(() => {
         if (phase === 'completed') {
-            const allExercises = selectedGroups.flatMap(group => selections[group] || []);
-            startWorkout(allExercises, selectedGroups);
+            const routeRoutine = params.routineId ? getRoutineById(params.routineId) : null;
+            const routineToStart = routeRoutine || pendingStartRoutine;
+            const fallbackExercises = selectedGroups.flatMap(group => selections[group] || []);
+            const exercisesToStart = routineToStart ? routineToStart.exercises : fallbackExercises;
+            const groupsToStart = routineToStart ? routineToStart.muscleGroups : selectedGroups;
+
+            if (exercisesToStart.length === 0 || groupsToStart.length === 0) {
+                clearPendingStartRoutine();
+                router.replace('/(tabs)/Workout');
+                return;
+            }
+
+            startWorkout(exercisesToStart, groupsToStart);
+            clearPendingStartRoutine();
             router.replace('/workout/Execution');
         }
-    }, [phase, router, selectedGroups, selections, startWorkout]);
+    }, [clearPendingStartRoutine, getRoutineById, params.routineId, pendingStartRoutine, phase, router, selectedGroups, selections, startWorkout]);
 
 
     if (phase === 'completed') {

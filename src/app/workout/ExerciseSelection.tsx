@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Alert } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing } from '@/src/constants/theme';
@@ -14,11 +14,19 @@ import WorkoutActionButton from '@/components/features/Workout/WorkoutActionButt
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 
 export default function ExerciseSelectionScreen() {
-    const params = useLocalSearchParams<{ groupIndex: string; mode?: string; muscleGroup?: string }>();
-    const isEditMode = params.mode === 'edit';
+    const params = useLocalSearchParams<{ groupIndex: string; mode?: string; muscleGroup?: string; routineId?: string }>();
+    const isWorkoutEditMode = params.mode === 'edit';
+    const isRoutineEditMode = params.mode === 'editRoutine';
     const groupIndex = parseInt(params.groupIndex || '0', 10);
 
-    const { selectedGroups, toggleExerciseSelection, selections } = useWorkoutCreation();
+    const {
+        selectedGroups,
+        toggleExerciseSelection,
+        selections,
+        createRoutineFromSelection,
+        isSavingRoutine,
+        lastRoutineError
+    } = useWorkoutCreation();
 
     const { session, toggleExercise } = useActiveWorkout();
     const [search, setSearch] = useState('');
@@ -27,7 +35,7 @@ export default function ExerciseSelectionScreen() {
 
     let currentGroup: MuscleGroup | null = null;
 
-    if (isEditMode) {
+    if (isWorkoutEditMode) {
         if (params.muscleGroup) {
             currentGroup = params.muscleGroup as MuscleGroup;
         } else {
@@ -44,7 +52,7 @@ export default function ExerciseSelectionScreen() {
     let selectedIds: string[] = [];
     let handleToggle = (id: string) => { };
 
-    if (isEditMode) {
+    if (isWorkoutEditMode) {
         if (session) {
             selectedIds = session.exerciseOrder.filter(id => {
                 const ex = exercises.find(e => e.id === id);
@@ -75,17 +83,29 @@ export default function ExerciseSelectionScreen() {
         ex.name.toLowerCase().includes(search.toLowerCase())
     );
 
-    const handleNext = () => {
-        if (isEditMode) {
+    const handleNext = async () => {
+        if (isWorkoutEditMode) {
             router.back();
             return;
         }
 
         const nextIndex = groupIndex + 1;
         if (nextIndex < selectedGroups.length)
-            router.push({ pathname: "/workout/ExerciseSelection", params: { groupIndex: nextIndex } });
-        else
-            router.push('/workout/FinishSelection');
+            router.push({
+                pathname: "/workout/ExerciseSelection",
+                params: {
+                    groupIndex: nextIndex,
+                    ...(isRoutineEditMode ? { mode: 'editRoutine', routineId: params.routineId } : {})
+                }
+            });
+        else {
+            const created = await createRoutineFromSelection();
+            if (created) {
+                router.replace('/(tabs)/Workout');
+            } else {
+                Alert.alert('Não foi possível salvar', lastRoutineError ?? 'Erro desconhecido ao salvar a rotina.');
+            }
+        }
     };
 
     const groupNameMap: Record<string, string> = {
@@ -102,7 +122,11 @@ export default function ExerciseSelectionScreen() {
     };
 
     const title = groupNameMap[currentGroup] || currentGroup;
-    const buttonTitle = isEditMode ? "VOLTAR AO TREINO" : (groupIndex === selectedGroups.length - 1 ? "INICIAR" : "AVANÇAR");
+    const buttonTitle = isWorkoutEditMode
+        ? "VOLTAR AO TREINO"
+        : (groupIndex === selectedGroups.length - 1
+            ? (isRoutineEditMode ? "SALVAR ALTERAÇÕES" : "SALVAR ROTINA")
+            : "AVANÇAR");
 
     return (
         <View style={styles.container}>
@@ -114,7 +138,7 @@ export default function ExerciseSelectionScreen() {
                     listHeaderComponent={
                         <SelectionHeader
                             title={title}
-                            subtitle={isEditMode ? "Editando treino atual" : `Selecione os exercícios de ${title.toLowerCase()}`}
+                            subtitle={isWorkoutEditMode ? "Editando treino atual" : `Selecione os exercícios de ${title.toLowerCase()}`}
                             placeholder="Buscar exercício..."
                             search={search}
                             onSearchChange={setSearch}
@@ -126,7 +150,7 @@ export default function ExerciseSelectionScreen() {
                     <WorkoutActionButton
                         title={buttonTitle}
                         onPress={handleNext}
-                        disabled={!isEditMode && selectedIds.length === 0}
+                        disabled={(!isWorkoutEditMode && selectedIds.length === 0) || isSavingRoutine}
                     />
                 </View>
 

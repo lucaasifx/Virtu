@@ -49,6 +49,18 @@ CREATE TABLE IF NOT EXISTS workouts (
     created_at TIMESTAMPTZ DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS workout_routines (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+    title TEXT NOT NULL,
+    category TEXT NOT NULL DEFAULT 'Hipertrofia',
+    muscle_groups TEXT[] NOT NULL DEFAULT '{}',
+    exercise_ids TEXT[] NOT NULL DEFAULT '{}',
+    cover_muscle_group TEXT NOT NULL DEFAULT 'CHEST',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- =============================================
 -- ROW LEVEL SECURITY (RLS)
 -- =============================================
@@ -57,6 +69,7 @@ ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE gamification ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_achievements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE workouts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE workout_routines ENABLE ROW LEVEL SECURITY;
 
 -- Profiles: users can only access their own profile
 CREATE POLICY "Users can view own profile" ON profiles
@@ -80,6 +93,9 @@ CREATE POLICY "Users can CRUD own achievements" ON user_achievements
 CREATE POLICY "Users can CRUD own workouts" ON workouts
     FOR ALL USING (auth.uid() = user_id);
 
+CREATE POLICY "Users can CRUD own workout routines" ON workout_routines
+    FOR ALL USING (auth.uid() = user_id);
+
 -- =============================================
 -- TRIGGERS
 -- =============================================
@@ -98,11 +114,24 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+CREATE OR REPLACE FUNCTION public.touch_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = now();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 -- Trigger for new user signup
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+
+DROP TRIGGER IF EXISTS workout_routines_touch_updated_at ON workout_routines;
+CREATE TRIGGER workout_routines_touch_updated_at
+    BEFORE UPDATE ON workout_routines
+    FOR EACH ROW EXECUTE PROCEDURE public.touch_updated_at();
 
 -- =============================================
 -- INDEXES (for performance)
@@ -111,6 +140,8 @@ CREATE TRIGGER on_auth_user_created
 CREATE INDEX IF NOT EXISTS idx_workouts_user_id ON workouts(user_id);
 CREATE INDEX IF NOT EXISTS idx_workouts_started_at ON workouts(started_at DESC);
 CREATE INDEX IF NOT EXISTS idx_user_achievements_user_id ON user_achievements(user_id);
+CREATE INDEX IF NOT EXISTS idx_workout_routines_user_id ON workout_routines(user_id);
+CREATE INDEX IF NOT EXISTS idx_workout_routines_updated_at ON workout_routines(updated_at DESC);
 
 -- =============================================
 -- MIGRATION: If you had workout_sets table, run this to drop it
