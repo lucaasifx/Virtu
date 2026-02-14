@@ -25,9 +25,9 @@ export function WorkoutExerciseListModal({ visible, onClose }: WorkoutExerciseLi
     const { session, moveGroup, reorderExercises, activeExerciseIndex } = useActiveWorkout();
     const insets = useSafeAreaInsets();
 
-    if (!session) return null;
-
     const groups = useMemo(() => {
+        if (!session) return [];
+
         const result: GroupSectionData[] = [];
         let currentGroup: MuscleGroup | null = null;
         let currentExercises: ExerciseSession[] = [];
@@ -63,13 +63,15 @@ export function WorkoutExerciseListModal({ visible, onClose }: WorkoutExerciseLi
         }
 
         return result;
-    }, [session.exercises, session.exerciseOrder]);
+    }, [session]);
 
     const handleGroupMove = React.useCallback((group: MuscleGroup, direction: 'up' | 'down') => {
         moveGroup(group, direction);
     }, [moveGroup]);
 
     const handleMoveExercise = (exerciseId: string, direction: 'up' | 'down') => {
+        if (!session) return;
+
         const globalIndex = session.exerciseOrder.indexOf(exerciseId);
         if (globalIndex === -1) return;
 
@@ -87,6 +89,8 @@ export function WorkoutExerciseListModal({ visible, onClose }: WorkoutExerciseLi
 
         reorderExercises(globalIndex, targetIndex);
     };
+
+    if (!session) return null;
 
     return (
         <Modal

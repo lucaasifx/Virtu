@@ -326,7 +326,7 @@ export const activeWorkoutReducer = (state: ActiveWorkoutState, action: ActiveWo
         case 'MOVE_GROUP': {
             if (!state.session) return state;
             const { group, direction } = action.payload;
-            const { exerciseOrder, exercises } = state.session;
+            const { exerciseOrder } = state.session;
 
 
             const historyIds = exerciseOrder.slice(0, state.activeExerciseIndex);

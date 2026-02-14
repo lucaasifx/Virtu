@@ -4,7 +4,7 @@ import { MuscleGroup } from '../types/workout';
 interface WorkoutContextData {
     selectedGroups: MuscleGroup[];
     setSelectedGroups: (groups: MuscleGroup[]) => void;
-    selections: Record<MuscleGroup, string[]>;
+    selections: Partial<Record<MuscleGroup, string[]>>;
     toggleExerciseSelection: (group: MuscleGroup, exerciseId: string) => void;
     resetWorkout: () => void;
     getExercisesForGroup: (group: MuscleGroup) => string[];
@@ -17,14 +17,14 @@ const WorkoutContext = createContext<WorkoutContextData | undefined>(undefined);
 
 export function WorkoutProvider({ children }: { children: ReactNode }) {
     const [selectedGroups, setSelectedGroupsState] = useState<MuscleGroup[]>([]);
-    const [selections, setSelections] = useState<Record<MuscleGroup, string[]>>({} as any);
+    const [selections, setSelections] = useState<Partial<Record<MuscleGroup, string[]>>>({});
     const [workoutCategory, setWorkoutCategory] = useState('Hipertrofia');
 
-    const setSelectedGroups = (groups: MuscleGroup[]) => {
+    const setSelectedGroups = React.useCallback((groups: MuscleGroup[]) => {
         setSelectedGroupsState(groups);
-    };
+    }, []);
 
-    const toggleExerciseSelection = (group: MuscleGroup, exerciseId: string) => {
+    const toggleExerciseSelection = React.useCallback((group: MuscleGroup, exerciseId: string) => {
         setSelections(prev => {
             const groupSelections = prev[group] || [];
             const isSelected = groupSelections.includes(exerciseId);
@@ -38,25 +38,25 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
                 [group]: newGroupSelections
             };
         });
-    };
+    }, []);
 
-    const getExercisesForGroup = (group: MuscleGroup) => {
+    const getExercisesForGroup = React.useCallback((group: MuscleGroup) => {
         return selections[group] || [];
-    };
+    }, [selections]);
 
-    const clearExercisesForGroup = (group: MuscleGroup) => {
+    const clearExercisesForGroup = React.useCallback((group: MuscleGroup) => {
         setSelections(prev => {
             const newSelections = { ...prev };
             delete newSelections[group];
             return newSelections;
         });
-    };
+    }, []);
 
-    const resetWorkout = () => {
+    const resetWorkout = React.useCallback(() => {
         setSelectedGroupsState([]);
-        setSelections({} as any);
+        setSelections({});
         setWorkoutCategory('Hipertrofia');
-    };
+    }, []);
 
     const contextValue = React.useMemo(() => ({
         selectedGroups,
@@ -68,7 +68,16 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
         clearExercisesForGroup,
         workoutCategory,
         setWorkoutCategory
-    }), [selectedGroups, selections, workoutCategory]);
+    }), [
+        selectedGroups,
+        setSelectedGroups,
+        selections,
+        toggleExerciseSelection,
+        resetWorkout,
+        getExercisesForGroup,
+        clearExercisesForGroup,
+        workoutCategory
+    ]);
 
     return (
         <WorkoutContext.Provider value={contextValue}>

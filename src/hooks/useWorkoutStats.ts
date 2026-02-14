@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getCachedWorkouts, CachedWorkout } from '@/src/lib/workoutSyncService';
-import { startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, subWeeks, format } from 'date-fns';
+import { startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 export interface WeeklyStats {

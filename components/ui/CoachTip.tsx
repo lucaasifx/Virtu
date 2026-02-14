@@ -16,7 +16,7 @@ export function CoachTip({ tip }: CoachTipProps) {
                 <Feather name="coffee" size={20} color="#9CA3AF" />
             </View>
             <Text style={styles.insightText}>
-                "{tip}"
+                {`"${tip}"`}
             </Text>
             <View style={styles.insightFooter}>
                 <View style={styles.insightLine} />

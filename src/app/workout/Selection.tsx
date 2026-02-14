@@ -1,14 +1,15 @@
-import React, { useState } from "react";
-import { View, StyleSheet, FlatList, TouchableOpacity, Text, Platform } from "react-native";
+import React from "react";
+import { View, StyleSheet, FlatList, TouchableOpacity, Text } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Stack, router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
-import { Colors, FontFamily, Spacing } from "@/src/constants/theme";
+import { Colors, FontFamily } from "@/src/constants/theme";
 import { MuscleGroup } from "@/src/types/workout";
 import { MuscleGroupCard } from "@/components/features/Workout/SelectGroup/MuscleGroupCard";
 import { GoalSelector } from "@/components/features/Workout/GoalSelector";
 import { useWorkoutCreation } from "@/src/context/WorkoutContext";
 import { MUSCLE_GROUPS } from "@/src/constants/muscleGroups";
+import WorkoutActionButton from "@/components/features/Workout/WorkoutActionButton";
 
 const FORM_CATEGORIES = ['Hipertrofia', 'Força', 'Cardio', 'Funcional'];
 
@@ -22,14 +23,14 @@ export default function SelectionScreen() {
         setWorkoutCategory
     } = useWorkoutCreation();
 
-    const onToggle = (group: MuscleGroup) => {
+    const onToggle = React.useCallback((group: MuscleGroup) => {
         if (selectedGroups.includes(group)) {
             setSelectedGroups(selectedGroups.filter(g => g !== group));
             clearExercisesForGroup(group);
         } else {
             setSelectedGroups([...selectedGroups, group]);
         }
-    };
+    }, [clearExercisesForGroup, selectedGroups, setSelectedGroups]);
 
     const renderItem = React.useCallback(({ item }: { item: typeof MUSCLE_GROUPS[0] }) => (
         <MuscleGroupCard
@@ -40,7 +41,7 @@ export default function SelectionScreen() {
             onPress={() => onToggle(item.id)}
             exerciseCount={item.exerciseCount}
         />
-    ), [selectedGroups]);
+    ), [onToggle, selectedGroups]);
 
     const handleNext = () => {
         if (selectedGroups.length > 0)
@@ -56,7 +57,6 @@ export default function SelectionScreen() {
             <Stack.Screen options={{ headerShown: false }} />
 
             <SafeAreaView style={styles.content} edges={['top']}>
-                {/* Header */}
                 <View style={styles.header}>
                     <TouchableOpacity
                         onPress={handleBack}
@@ -81,8 +81,7 @@ export default function SelectionScreen() {
                             />
 
                             <View style={styles.rowBetween}>
-                                <Text style={styles.label}>Quais grupos iremos treinar?</Text>
-                                <Text style={[styles.label, { color: '#FDCB13' }]}>Múltipla Escolha</Text>
+                                <Text style={styles.headerTitle}>Quais grupos iremos treinar?</Text>
                             </View>
                         </View>
                     }
@@ -90,17 +89,11 @@ export default function SelectionScreen() {
                 />
 
                 <View style={[styles.footer, { paddingBottom: 24 + insets.bottom }]}>
-                    <TouchableOpacity
+                    <WorkoutActionButton
+                        title="AVANÇAR"
                         onPress={handleNext}
                         disabled={selectedGroups.length === 0}
-                        style={[
-                            styles.primaryButton,
-                            selectedGroups.length === 0 && styles.buttonDisabled
-                        ]}
-                    >
-                        <Text style={[styles.primaryButtonText, selectedGroups.length === 0 && { color: '#9CA3AF' }]}>Avançar</Text>
-                        <Feather name="chevron-right" size={18} color={selectedGroups.length > 0 ? "#111" : "#9CA3AF"} />
-                    </TouchableOpacity>
+                    />
                 </View>
             </SafeAreaView>
         </View>
@@ -155,34 +148,5 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         padding: 24,
-        backgroundColor: 'rgba(255,255,255,0.9)',
-        borderTopWidth: 1,
-        borderTopColor: '#F3F4F6',
-    },
-    primaryButton: {
-        backgroundColor: '#FDCB13',
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 18,
-        borderRadius: 30,
-        gap: 8,
-        shadowColor: '#FDCB13',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 4,
-    },
-    buttonDisabled: {
-        backgroundColor: '#E5E7EB',
-        shadowOpacity: 0,
-        elevation: 0,
-    },
-    primaryButtonText: {
-        fontSize: 14,
-        fontFamily: FontFamily.title.bold,
-        color: '#111',
-        textTransform: 'uppercase',
-        letterSpacing: 1,
     },
 });

@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useRef, useCallback } from 'react';
-import { AppState } from 'react-native';
-import { WorkoutSession, SetLog, ExerciseSession } from '../types/execution';
+import { WorkoutSession, ExerciseSession } from '../types/execution';
 import { MuscleGroup } from '../types/workout';
 import { router } from 'expo-router';
 import { activeWorkoutReducer } from './ActiveWorkoutReducer';
 import { NotificationService } from '../services/NotificationService';
 import { getExerciseById } from '../constants/exercises';
+import { createWorkoutSession, calculateWorkoutSummary } from './ActiveWorkoutSession';
 
 interface ActiveWorkoutContextData {
     session: WorkoutSession | null;
@@ -54,58 +54,40 @@ export function ActiveWorkoutProvider({ children, onWorkoutEnd }: ActiveWorkoutP
         };
     }, []);
 
-    const formatTime = (seconds: number) => {
+    const formatTime = useCallback((seconds: number) => {
         const h = Math.floor(seconds / 3600);
         const m = Math.floor((seconds % 3600) / 60);
         const s = seconds % 60;
         return `${h > 0 ? h + ':' : ''}${m < 10 ? '0' + m : m}:${s < 10 ? '0' + s : s}`;
-    };
-
-    const appState = useRef(AppState.currentState);
-
-    useEffect(() => {
-        const subscription = AppState.addEventListener('change', nextAppState => {
-            appState.current = nextAppState;
-        });
-        return () => subscription.remove();
     }, []);
+    const notificationTimerBucket = Math.floor(timerSeconds / 60);
 
     useEffect(() => {
-        if (session) {
-            const activeExId = session.exerciseOrder[activeExerciseIndex];
-            const activeEx = session.exercises[activeExId];
-            const exerciseName = activeEx ? (getExerciseById(activeEx.exerciseId)?.name || 'Exercício') : 'Treino Ativo';
-
-            const statusBody = isPaused
-                ? "PAUSADO - Toque para retomar"
-                : `Tempo: ${formatTime(timerSeconds)} • Série ${(activeEx?.sets.length || 0) + 1}`;
-
-            NotificationService.showWorkoutNotification(
-                exerciseName,
-                statusBody,
-                isPaused
-            );
-        } else {
+        if (!session) {
             NotificationService.dismissWorkoutNotification();
+            return;
         }
-    }, [isPaused, session, activeExerciseIndex]);
 
-    useEffect(() => {
-        if (session && !isPaused && appState.current !== 'active') {
-            const activeExId = session.exerciseOrder[activeExerciseIndex];
-            const activeEx = session.exercises[activeExId];
-            const exerciseName = activeEx ? (getExerciseById(activeEx.exerciseId)?.name || 'Exercício') : 'Treino Ativo';
+        const activeExId = session.exerciseOrder[activeExerciseIndex];
+        const activeEx = session.exercises[activeExId];
+        const activeExerciseName = activeEx ? (getExerciseById(activeEx.exerciseId)?.name || 'Exercício') : 'Treino Ativo';
+        const nextExerciseId = session.exerciseOrder[activeExerciseIndex + 1];
+        const nextExerciseName = nextExerciseId ? (getExerciseById(nextExerciseId)?.name || 'Próximo exercício') : 'Finalizar treino';
+        const displaySeconds = notificationTimerBucket * 60;
 
-            NotificationService.showWorkoutNotification(
-                exerciseName,
-                `Tempo: ${formatTime(timerSeconds)} • Série ${(activeEx?.sets.length || 0) + 1}`,
-                isPaused
-            );
-        }
-    }, [timerSeconds]);
+        const notificationTitle = isPaused ? 'VIRTU • TREINO PAUSADO' : 'VIRTU • TREINO ATIVO';
+        const notificationSubtitle = activeExerciseName.toUpperCase();
+        const playerHeader = nextExerciseId ? `PROXIMO EXERCICIO: ${nextExerciseName}` : `FIM DO TREINO: ${nextExerciseName}`;
+        const timerLabel = `TIMER: ${formatTime(displaySeconds)}`;
+        const statusBody = `${playerHeader}\n${timerLabel}`;
 
-    const togglePauseRef = useRef(isPaused);
-    useEffect(() => { togglePauseRef.current = isPaused; }, [isPaused]);
+        NotificationService.showWorkoutNotification(
+            notificationTitle,
+            notificationSubtitle,
+            statusBody,
+            isPaused
+        );
+    }, [activeExerciseIndex, formatTime, isPaused, notificationTimerBucket, session]);
 
     useEffect(() => {
         const subscription = NotificationService.addNotificationResponseReceivedListener(response => {
@@ -131,24 +113,8 @@ export function ActiveWorkoutProvider({ children, onWorkoutEnd }: ActiveWorkoutP
         return () => clearInterval(interval);
     }, [session, isPaused]);
 
-    const startWorkout = (exerciseIds: string[], groups: MuscleGroup[]) => {
-        const exercisesDict: Record<string, ExerciseSession> = {};
-        exerciseIds.forEach(id => {
-            exercisesDict[id] = {
-                exerciseId: id,
-                sets: [],
-                targetSets: 4
-            };
-        });
-
-        const newSession: WorkoutSession = {
-            id: Date.now().toString(),
-            startTime: new Date(),
-            status: 'active',
-            muscleGroups: groups,
-            exercises: exercisesDict,
-            exerciseOrder: exerciseIds
-        };
+    const startWorkout = useCallback((exerciseIds: string[], groups: MuscleGroup[]) => {
+        const newSession = createWorkoutSession(exerciseIds, groups);
 
         sessionRef.current = newSession;
         activeIndexRef.current = 0;
@@ -157,7 +123,7 @@ export function ActiveWorkoutProvider({ children, onWorkoutEnd }: ActiveWorkoutP
         setActiveExerciseIndex(0);
         setTimerSeconds(0);
         setIsPaused(false);
-    };
+    }, []);
 
     const logSet = useCallback((weight: number, reps: number, rpe: number) => {
         console.log('[ActiveWorkout] 📥 logSet called with:', { weight, reps, rpe }, 'at', new Date().toISOString());
@@ -183,22 +149,8 @@ export function ActiveWorkoutProvider({ children, onWorkoutEnd }: ActiveWorkoutP
             newState.session?.exercises[newState.session.exerciseOrder[currentIndex]]?.sets.length);
     }, []);
 
-    const togglePause = () => {
+    const togglePause = useCallback(() => {
         setIsPaused(prev => !prev);
-    };
-
-    const nextExercise = useCallback(() => {
-        const currentSession = sessionRef.current;
-        const currentIndex = activeIndexRef.current;
-
-        if (!currentSession) return;
-        if (currentIndex < currentSession.exerciseOrder.length - 1) {
-            const newIndex = currentIndex + 1;
-            activeIndexRef.current = newIndex;
-            setActiveExerciseIndex(newIndex);
-        } else {
-            finishWorkout();
-        }
     }, []);
 
     const prevExercise = useCallback(() => {
@@ -216,18 +168,7 @@ export function ActiveWorkoutProvider({ children, onWorkoutEnd }: ActiveWorkoutP
         if (!currentSession) return;
 
         const endTime = new Date();
-        const duration = Math.floor((endTime.getTime() - new Date(currentSession.startTime).getTime()) / 1000);
-
-        let totalVolume = 0;
-        let totalSets = 0;
-
-        currentSession.exerciseOrder.forEach(id => {
-            const ex = currentSession.exercises[id];
-            totalSets += ex.sets.length;
-            ex.sets.forEach(set => {
-                totalVolume += set.weight * set.reps;
-            });
-        });
+        const { duration, totalVolume, totalSets } = calculateWorkoutSummary(currentSession, endTime);
 
         // Sync to Supabase in BACKGROUND (non-blocking)
         import('@/src/lib/workoutSyncService').then(({ syncWorkoutToSupabase }) => {
@@ -247,11 +188,25 @@ export function ActiveWorkoutProvider({ children, onWorkoutEnd }: ActiveWorkoutP
             params: {
                 duration: duration.toString(),
                 volume: totalVolume.toString(),
-                sets: totalSets.toString(),
+                totalSets: totalSets.toString(),
                 date: endTime.toISOString(),
             }
         });
     }, [onWorkoutEnd]);
+
+    const nextExercise = useCallback(() => {
+        const currentSession = sessionRef.current;
+        const currentIndex = activeIndexRef.current;
+
+        if (!currentSession) return;
+        if (currentIndex < currentSession.exerciseOrder.length - 1) {
+            const newIndex = currentIndex + 1;
+            activeIndexRef.current = newIndex;
+            setActiveExerciseIndex(newIndex);
+        } else {
+            finishWorkout();
+        }
+    }, [finishWorkout]);
 
 
 
@@ -388,7 +343,24 @@ export function ActiveWorkoutProvider({ children, onWorkoutEnd }: ActiveWorkoutP
         reorderExercises,
         skipExercise,
         moveGroup
-    }), [session, activeExerciseIndex, isPaused]);
+    }), [
+        session,
+        activeExerciseIndex,
+        isPaused,
+        startWorkout,
+        logSet,
+        togglePause,
+        nextExercise,
+        prevExercise,
+        finishWorkout,
+        cancelWorkout,
+        getActiveExercise,
+        removeExercise,
+        toggleExercise,
+        reorderExercises,
+        skipExercise,
+        moveGroup
+    ]);
 
     return (
         <ActiveWorkoutContext.Provider value={contextValue}>

@@ -1,10 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import * as Haptics from 'expo-haptics';
 import {
     useSharedValue,
     withTiming,
     Easing,
-    runOnJS
 } from 'react-native-reanimated';
 
 export type Phase = 'counting' | 'transition' | 'completed';
@@ -15,6 +14,19 @@ export function useCountdownController() {
 
     const circleScale = useSharedValue(0);
     const contentOpacity = useSharedValue(1);
+
+    const startTransition = useCallback(() => {
+        circleScale.value = withTiming(1, {
+            duration: 600,
+            easing: Easing.out(Easing.exp),
+        });
+
+        contentOpacity.value = withTiming(0, { duration: 200 });
+
+        setTimeout(() => {
+            setPhase('completed');
+        }, 800);
+    }, [circleScale, contentOpacity]);
 
     useEffect(() => {
         if (phase === 'counting') {
@@ -31,20 +43,7 @@ export function useCountdownController() {
             }, 1000);
             return () => clearTimeout(timer);
         }
-    }, [count, phase]);
-
-    const startTransition = () => {
-        circleScale.value = withTiming(1, {
-            duration: 600,
-            easing: Easing.out(Easing.exp),
-        });
-
-        contentOpacity.value = withTiming(0, { duration: 200 });
-
-        setTimeout(() => {
-            setPhase('completed');
-        }, 800);
-    };
+    }, [count, phase, startTransition]);
 
     return {
         count,

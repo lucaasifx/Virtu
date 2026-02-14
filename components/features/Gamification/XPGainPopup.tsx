@@ -55,7 +55,7 @@ export function XPGainPopup({ amount, visible, onComplete }: XPGainPopupProps) {
                 })
             );
         }
-    }, [visible, amount]);
+    }, [amount, iconRotate, onComplete, opacity, translateY, visible]);
 
     const containerStyle = useAnimatedStyle(() => ({
         transform: [{ translateY: translateY.value }],

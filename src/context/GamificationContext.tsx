@@ -13,11 +13,8 @@ import {
     updateStreak,
     checkAchievements,
     unlockAchievements,
-    calculateXPForSet,
-    calculateXPForExercise,
     calculateXPForWorkout,
     calculateStreakBonus,
-    calculateFirstSetBonus,
     calculatePRBonus,
     getXPProgress,
 } from '@/src/services/GamificationService';
@@ -27,7 +24,7 @@ const STORAGE_KEY = '@virtu_gamification';
 type GamificationAction =
     | { type: 'LOAD_STATE'; payload: GamificationState }
     | { type: 'ADD_XP'; payload: { event: XPEvent } }
-    | { type: 'UPDATE_STREAK'; payload: { increment: number; lastDate: string } }
+    | { type: 'UPDATE_STREAK'; payload: { streak: number; lastDate: string } }
     | { type: 'UNLOCK_ACHIEVEMENTS'; payload: { ids: AchievementId[] } }
     | { type: 'RESET' };
 
@@ -50,7 +47,7 @@ function gamificationReducer(state: GamificationState, action: GamificationActio
         case 'UPDATE_STREAK':
             return {
                 ...state,
-                streak: state.streak + action.payload.increment,
+                streak: action.payload.streak,
                 lastWorkoutDate: action.payload.lastDate,
             };
 
@@ -86,8 +83,6 @@ const GamificationContext = createContext<GamificationContextType | null>(null);
 export function GamificationProvider({ children }: { children: ReactNode }) {
     const [state, dispatch] = useReducer(gamificationReducer, createInitialState());
     const [isLoaded, setIsLoaded] = React.useState(false);
-    const [pendingLevelUp, setPendingLevelUp] = React.useState<LevelInfo | null>(null);
-    const [pendingAchievements, setPendingAchievements] = React.useState<AchievementId[]>([]);
 
     useEffect(() => {
         loadState();
@@ -134,22 +129,29 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
         xpEarned += calculateXPForWorkout();
 
         const streakResult = updateStreak(state.lastWorkoutDate);
-        if (streakResult.newStreak > 0) {
+        const nextStreak = streakResult.streakBroken
+            ? 1
+            : state.streak + streakResult.increment;
+
+        if (streakResult.increment > 0) {
             dispatch({
                 type: 'UPDATE_STREAK',
                 payload: {
-                    increment: streakResult.newStreak,
+                    streak: nextStreak,
                     lastDate: now.toISOString(),
                 },
             });
-            xpEarned += calculateStreakBonus(state.streak + streakResult.newStreak);
+            xpEarned += calculateStreakBonus(nextStreak);
         }
 
         if (stats.isPR) {
             xpEarned += calculatePRBonus();
         }
 
-        const newAchievements = checkAchievements(state, {
+        const newAchievements = checkAchievements({
+            ...state,
+            streak: nextStreak,
+        }, {
             totalSets: stats.totalSets,
             isFirstWorkout: stats.isFirstWorkout,
             isPR: stats.isPR,

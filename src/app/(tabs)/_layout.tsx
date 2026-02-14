@@ -1,11 +1,7 @@
 import { Tabs } from "expo-router";
 import { TabBar } from "@/components/ui/TabBar";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { StyleSheet, View } from "react-native";
 
 export default function TabLayout() {
-    const insets = useSafeAreaInsets();
-
     return (
         <Tabs
             tabBar={(props) => <TabBar {...props} />}
@@ -37,7 +33,3 @@ export default function TabLayout() {
         </Tabs>
     );
 }
-
-const styles = StyleSheet.create({
-    // Removed old styles
-});

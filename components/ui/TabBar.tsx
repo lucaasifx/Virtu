@@ -1,8 +1,8 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, LayoutChangeEvent, Platform, Pressable } from 'react-native';
+import { View, StyleSheet, Pressable } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { BlurView } from 'expo-blur';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming, interpolate, Extrapolation, FadeIn } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring, interpolate, FadeIn } from 'react-native-reanimated';
 import { Colors, Spacing } from '@/src/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,13 +19,11 @@ const ICONS: Record<string, { active: keyof typeof Ionicons.glyphMap; inactive: 
 const TabIcon = ({
     name,
     isFocused,
-    routeKey,
     onPress,
     onLongPress
 }: {
     name: string;
     isFocused: boolean;
-    routeKey: string;
     onPress: () => void;
     onLongPress: () => void;
 }) => {
@@ -33,7 +31,7 @@ const TabIcon = ({
 
     useEffect(() => {
         scale.value = withSpring(isFocused ? 1 : 0, { damping: 10, stiffness: 100 });
-    }, [isFocused]);
+    }, [isFocused, scale]);
 
     const animatedStyle = useAnimatedStyle(() => {
         return {
@@ -69,7 +67,7 @@ const TabIcon = ({
     );
 };
 
-export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+export function TabBar({ state, navigation }: BottomTabBarProps) {
     const insets = useSafeAreaInsets();
 
     return (
@@ -81,7 +79,6 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
             >
                 <View style={styles.content}>
                     {state.routes.map((route, index) => {
-                        const { options } = descriptors[route.key];
                         const isFocused = state.index === index;
 
                         const onPress = () => {
@@ -109,7 +106,6 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
                                 key={route.key}
                                 name={route.name}
                                 isFocused={isFocused}
-                                routeKey={route.key}
                                 onPress={onPress}
                                 onLongPress={onLongPress}
                             />

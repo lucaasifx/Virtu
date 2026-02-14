@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { WorkoutSession, SetLog, ExerciseSession } from '../types/execution';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Json } from './database.types';
 
 const WORKOUT_CACHE_KEY = '@virtu_workouts_cache';
 const CACHE_LAST_SYNC_KEY = '@virtu_last_workout_sync';
@@ -8,12 +9,12 @@ const CACHE_LAST_SYNC_KEY = '@virtu_last_workout_sync';
 // Types for JSONB storage
 export interface WorkoutExerciseData {
     exerciseId: string;
-    sets: Array<{
+    sets: {
         weight: number;
         reps: number;
         rpe: number;
         completedAt: string;
-    }>;
+    }[];
 }
 
 export interface CachedWorkout {
@@ -31,6 +32,44 @@ export interface WorkoutSyncResult {
     success: boolean;
     workoutId?: string;
     error?: string;
+}
+
+function parseExercisesData(data: Json | null): WorkoutExerciseData[] {
+    if (!Array.isArray(data)) return [];
+
+    return data
+        .map((item) => {
+            if (!item || typeof item !== 'object' || Array.isArray(item)) return null;
+
+            const exerciseId = item.exerciseId;
+            const sets = item.sets;
+
+            if (typeof exerciseId !== 'string' || !Array.isArray(sets)) return null;
+
+            const parsedSets = sets
+                .map((set) => {
+                    if (!set || typeof set !== 'object' || Array.isArray(set)) return null;
+
+                    const { weight, reps, rpe, completedAt } = set;
+                    if (
+                        typeof weight !== 'number' ||
+                        typeof reps !== 'number' ||
+                        typeof rpe !== 'number' ||
+                        typeof completedAt !== 'string'
+                    ) {
+                        return null;
+                    }
+
+                    return { weight, reps, rpe, completedAt };
+                })
+                .filter((set): set is WorkoutExerciseData['sets'][number] => set !== null);
+
+            return {
+                exerciseId,
+                sets: parsedSets,
+            };
+        })
+        .filter((item): item is WorkoutExerciseData => item !== null);
 }
 
 /**
@@ -73,10 +112,10 @@ export async function syncWorkoutToSupabase(
                 })),
             });
         }
+        const exercisesDataJson = exercisesData as unknown as Json;
 
         // Insert workout with JSONB data
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: workout, error: workoutError } = await (supabase as any)
+        const { data: workout, error: workoutError } = await supabase
             .from('workouts')
             .insert({
                 user_id: user.id,
@@ -86,7 +125,7 @@ export async function syncWorkoutToSupabase(
                 total_volume: totalVolume,
                 total_sets: totalSets,
                 muscle_groups: session.muscleGroups,
-                exercises_data: exercisesData,
+                exercises_data: exercisesDataJson,
                 status: 'completed',
             })
             .select('id')
@@ -207,8 +246,7 @@ export async function syncWorkoutsFromSupabase(daysToSync: number = 30): Promise
         dateLimit.setDate(dateLimit.getDate() - daysToSync);
         const dateLimitStr = dateLimit.toISOString();
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: workouts, error } = await (supabase as any)
+        const { data: workouts, error } = await supabase
             .from('workouts')
             .select('*')
             .eq('user_id', user.id)
@@ -221,15 +259,15 @@ export async function syncWorkoutsFromSupabase(daysToSync: number = 30): Promise
         }
 
         // Transform to CachedWorkout format
-        const fetchedWorkouts: CachedWorkout[] = workouts.map((w: Record<string, unknown>) => ({
-            id: w.id as string,
-            startedAt: w.started_at as string,
-            endedAt: w.ended_at as string,
-            durationSeconds: w.duration_seconds as number,
-            totalVolume: w.total_volume as number,
-            totalSets: w.total_sets as number,
-            muscleGroups: w.muscle_groups as string[],
-            exercisesData: w.exercises_data as WorkoutExerciseData[],
+        const fetchedWorkouts: CachedWorkout[] = (workouts ?? []).map((w) => ({
+            id: w.id,
+            startedAt: w.started_at,
+            endedAt: w.ended_at ?? w.started_at,
+            durationSeconds: w.duration_seconds ?? 0,
+            totalVolume: w.total_volume ?? 0,
+            totalSets: w.total_sets ?? 0,
+            muscleGroups: w.muscle_groups ?? [],
+            exercisesData: parseExercisesData(w.exercises_data),
         }));
 
         // MERGE Strategy:
@@ -283,8 +321,7 @@ export async function syncGamificationToSupabase(
             return { success: false, error: 'User not authenticated' };
         }
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error } = await (supabase as any)
+        const { error } = await supabase
             .from('gamification')
             .upsert({
                 user_id: user.id,

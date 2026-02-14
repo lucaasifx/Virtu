@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { StyleSheet, View, Modal, Pressable } from 'react-native';
+import { StyleSheet, Modal, Pressable } from 'react-native';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
@@ -48,7 +48,7 @@ export function LevelUpModal({ visible, levelInfo, onClose }: LevelUpModalProps)
                 )
             );
         }
-    }, [visible]);
+    }, [badgeRotate, starScale, visible]);
 
     const starStyle = useAnimatedStyle(() => ({
         transform: [{ scale: starScale.value }],

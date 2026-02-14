@@ -3,8 +3,6 @@ import { StyleSheet, View, Text } from 'react-native';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
-    withSpring,
-    withDelay,
     withTiming,
     runOnJS,
     SlideInRight,
@@ -31,7 +29,7 @@ export function AchievementUnlockedToast({ achievement, visible, onComplete }: A
                 }
             });
         }
-    }, [visible, achievement]);
+    }, [achievement, onComplete, progress, visible]);
 
     const progressStyle = useAnimatedStyle(() => ({
         width: `${progress.value * 100}%`,

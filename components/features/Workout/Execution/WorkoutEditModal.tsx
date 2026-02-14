@@ -38,7 +38,6 @@ export function WorkoutEditModal({ visible, onClose }: WorkoutEditModalProps) {
 
                     <ScrollView style={styles.list}>
                         {session.exerciseOrder.map((exerciseId, index) => {
-                            const exSession = session.exercises[exerciseId];
                             const exerciseDef = getExerciseById(exerciseId);
                             if (!exerciseDef) return null;
 

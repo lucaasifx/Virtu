@@ -33,7 +33,7 @@ export function CountdownBackground() {
             ripple3Scale.value = withRepeat(withTiming(2.5, { duration: rippleDuration, easing: Easing.out(Easing.quad) }), -1, false);
             ripple3Opacity.value = withRepeat(withSequence(withTiming(0.2, { duration: rippleDuration / 2 }), withTiming(0, { duration: rippleDuration / 2 })), -1, false);
         }, 1200);
-    }, []);
+    }, [ripple1Opacity, ripple1Scale, ripple2Opacity, ripple2Scale, ripple3Opacity, ripple3Scale]);
 
     const ripple1Style = useAnimatedStyle(() => ({
         transform: [{ scale: ripple1Scale.value }],

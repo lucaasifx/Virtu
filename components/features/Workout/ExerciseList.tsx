@@ -67,6 +67,7 @@ const ExerciseItem = React.memo(({
         </TouchableOpacity>
     );
 });
+ExerciseItem.displayName = 'ExerciseItem';
 
 export default function ExerciseList({
     exercises,

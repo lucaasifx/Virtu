@@ -19,7 +19,7 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.lucaasifx.virtu",
+      "package": "com.lucaasifx.virtu"
     },
     "web": {
       "output": "static",
@@ -27,6 +27,13 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/android-icon-monochrome.png",
+          "color": "#000000"
+        }
+      ],
       [
         "expo-splash-screen",
         {

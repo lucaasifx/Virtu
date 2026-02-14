@@ -7,14 +7,15 @@ import {
     Pressable,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { FontAwesome5, Entypo } from '@expo/vector-icons';
+import { Entypo, Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Header } from '@/components/ui/Header';
 import { useGamification } from '@/src/context/GamificationContext';
 import { CategorySelector } from '@/components/features/Workout/CategorySelector';
 import { WorkoutCard } from '@/components/features/Workout/WorkoutCard';
 import { WorkoutHeader } from '@/components/features/Workout/WorkoutHeader';
-import { FontFamily } from '@/src/constants/theme';
+import { Colors, FontFamily } from '@/src/constants/theme';
+import Animated, { FadeInDown, ZoomIn } from 'react-native-reanimated';
 
 // --- TYPES & MOCKS ---
 const CATEGORIES = ['Todos', 'Hipertrofia', 'Força', 'Cardio'];
@@ -48,11 +49,12 @@ export default function Workout() {
     const insets = useSafeAreaInsets();
     const { state, xpProgress, levelInfo } = useGamification();
     const [activeCategory, setActiveCategory] = useState('Todos');
-    const [workouts, setWorkouts] = useState(INITIAL_WORKOUTS);
+    const [workouts] = useState(INITIAL_WORKOUTS);
 
     const filteredWorkouts = activeCategory === 'Todos'
         ? workouts
         : workouts.filter(w => w.category === activeCategory);
+    const isEmptyCategory = filteredWorkouts.length === 0;
 
     const handleCreateRoutine = () => {
         router.push('/workout/Selection');
@@ -84,6 +86,29 @@ export default function Workout() {
                         <WorkoutCard key={workout.id} workout={workout} />
                     ))}
 
+                    {isEmptyCategory && (
+                        <Animated.View entering={FadeInDown.duration(420)} style={styles.emptyStateCard}>
+                            <Animated.View entering={ZoomIn.duration(420)} style={styles.emptyIconWrapper}>
+                                <View style={[styles.bracket, styles.bracketTopLeft]} />
+                                <View style={[styles.bracket, styles.bracketBottomRight]} />
+
+                                <View style={styles.emptyIconCircle}>
+                                    <Ionicons name="barbell-outline" size={40} color={Colors.primary} />
+                                </View>
+
+                                <View style={styles.emptyBadge}>
+                                    <Ionicons name="sparkles" size={14} color="#111827" />
+                                </View>
+                            </Animated.View>
+
+                            <Text style={styles.emptyTitle}>SEM TREINOS NESSA CATEGORIA</Text>
+                            <View style={styles.emptyDivider} />
+                            <Text style={styles.emptyDescription}>
+                                Monte uma rotina nova e preencha essa aba com progresso real.
+                            </Text>
+                        </Animated.View>
+                    )}
+
                     <Pressable
                         onPress={handleCreateRoutine}
                         style={styles.createButton}
@@ -112,13 +137,6 @@ export default function Workout() {
                             </View>
                         )}
                     </Pressable>
-
-                    {filteredWorkouts.length === 0 && (
-                        <View style={styles.emptyState}>
-                            <FontAwesome5 name="dumbbell" size={32} color="#D1D5DB" />
-                            <Text style={styles.emptyText}>Nenhuma rotina encontrada</Text>
-                        </View>
-                    )}
                 </View>
             </ScrollView>
         </View>
@@ -169,15 +187,84 @@ const styles = StyleSheet.create({
         textTransform: 'uppercase',
         letterSpacing: 1,
     },
-    emptyState: {
+    emptyStateCard: {
+        marginTop: 8,
+        borderRadius: 24,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+        backgroundColor: '#FCFCFC',
+        alignItems: 'center',
+        paddingVertical: 26,
+        paddingHorizontal: 24,
+    },
+    emptyIconWrapper: {
+        width: 108,
+        height: 108,
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 60,
-        gap: 16,
+        marginBottom: 16,
+        position: 'relative',
     },
-    emptyText: {
-        fontSize: 14,
+    bracket: {
+        position: 'absolute',
+        width: 30,
+        height: 30,
+        borderColor: Colors.primary,
+        borderWidth: 2,
+    },
+    bracketTopLeft: {
+        top: 0,
+        left: 0,
+        borderBottomWidth: 0,
+        borderRightWidth: 0,
+    },
+    bracketBottomRight: {
+        bottom: 0,
+        right: 0,
+        borderTopWidth: 0,
+        borderLeftWidth: 0,
+    },
+    emptyIconCircle: {
+        width: 76,
+        height: 76,
+        borderRadius: 38,
+        backgroundColor: '#111827',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    emptyBadge: {
+        position: 'absolute',
+        right: 8,
+        bottom: 8,
+        width: 24,
+        height: 24,
+        borderRadius: 8,
+        backgroundColor: Colors.primary,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 2,
+        borderColor: '#FFFFFF',
+    },
+    emptyTitle: {
+        fontSize: 15,
+        fontFamily: FontFamily.title.extraBold,
+        color: '#111827',
+        letterSpacing: 0.7,
+        textAlign: 'center',
+    },
+    emptyDivider: {
+        width: 56,
+        height: 4,
+        borderRadius: 2,
+        backgroundColor: Colors.primary,
+        marginTop: 12,
+    },
+    emptyDescription: {
+        marginTop: 12,
+        textAlign: 'center',
+        fontSize: 13,
         fontFamily: FontFamily.body.medium,
-        color: '#9CA3AF',
+        color: '#6B7280',
+        lineHeight: 20,
     },
 });

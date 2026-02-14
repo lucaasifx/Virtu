@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, Image, Platform } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity, Image } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Colors, Spacing } from '@/src/constants/theme';
 import Animated, { FadeInDown, FadeInUp, ZoomIn } from 'react-native-reanimated';
@@ -26,7 +26,7 @@ export default function WorkoutSummaryScreen() {
 
     const duration = parseInt(params.duration as string || '0');
     const volume = parseInt(params.volume as string || '0');
-    const totalSets = parseInt(params.totalSets as string || '0');
+    const totalSets = parseInt((params.totalSets as string) || (params.sets as string) || '0');
 
     useEffect(() => {
         if (!hasRecorded.current) {
@@ -47,7 +47,7 @@ export default function WorkoutSummaryScreen() {
                 setShowXPPopup(true);
             }, 800);
         }
-    }, []);
+    }, [recordWorkoutComplete, state.xpHistory.length, totalSets]);
 
     const streakDays = state.streak;
 

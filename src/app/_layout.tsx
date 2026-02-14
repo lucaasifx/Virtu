@@ -1,19 +1,18 @@
 import { Stack, usePathname, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import * as SystemUI from "expo-system-ui";
 import React, { useEffect, useMemo } from "react";
-import { Platform, ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, View } from "react-native";
 
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons, Feather } from "@expo/vector-icons";
 import { useFonts } from "expo-font";
 import { ThemeFonts, Colors } from "@/src/constants/theme";
-import { TabBar } from "@/components/ui/TabBar";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ActiveWorkoutProvider } from "@/src/context/ActiveWorkoutContext";
 import { WorkoutProvider, useWorkoutCreation } from "@/src/context/WorkoutContext";
 import { GamificationProvider } from "@/src/context/GamificationContext";
 import { AuthProvider, useAuth } from "@/src/context/AuthContext";
+import { ThemeProvider, useAppTheme } from "@/src/context/ThemeContext";
 import { useDataSync } from "@/src/hooks/useDataSync";
 
 SplashScreen.preventAutoHideAsync();
@@ -44,7 +43,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
     } else if (user && inAuthGroup) {
       router.replace('/(tabs)/Home');
     }
-  }, [user, isLoading, segments]);
+  }, [isLoading, router, segments, user]);
 
   if (isLoading) {
     return (
@@ -62,40 +61,14 @@ function DataSyncWrapper({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-export default function RootLayout() {
-  const segments = useSegments();
-  const [loaded, error] = useFonts({
-    ...ThemeFonts,
-    ...Ionicons.font,
-    ...Feather.font,
-  });
-
-  const pathname = usePathname();
-
-  const isDarkScreen = useMemo(() => {
-    return DARK_SCREENS.some(screen => pathname.includes(screen));
-  }, [pathname]);
-
-  const isTabScreen = useMemo(() => {
-    return segments[0] === '(tabs)';
-  }, [segments]);
-
-
-
-  useEffect(() => {
-    if (loaded || error) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded, error]);
-
-  if (!loaded && !error) {
-    return null;
-  }
+function AppContent({ isDarkScreen }: { isDarkScreen: boolean }) {
+  const { resolvedTheme } = useAppTheme();
+  const statusBarStyle = isDarkScreen || resolvedTheme === 'dark' ? 'light' : 'dark';
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <>
       <StatusBar
-        style={isDarkScreen ? 'light' : 'dark'}
+        style={statusBarStyle}
         translucent
         backgroundColor="transparent"
       />
@@ -116,6 +89,38 @@ export default function RootLayout() {
           </GamificationProvider>
         </AuthGate>
       </AuthProvider>
+    </>
+  );
+}
+
+export default function RootLayout() {
+  const [loaded, error] = useFonts({
+    ...ThemeFonts,
+    ...Ionicons.font,
+    ...Feather.font,
+  });
+
+  const pathname = usePathname();
+
+  const isDarkScreen = useMemo(() => {
+    return DARK_SCREENS.some(screen => pathname.includes(screen));
+  }, [pathname]);
+
+  useEffect(() => {
+    if (loaded || error) {
+      SplashScreen.hideAsync();
+    }
+  }, [loaded, error]);
+
+  if (!loaded && !error) {
+    return null;
+  }
+
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider>
+        <AppContent isDarkScreen={isDarkScreen} />
+      </ThemeProvider>
     </GestureHandlerRootView>
   );
 }

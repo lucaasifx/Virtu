@@ -76,7 +76,7 @@ export function RpeSlider({ value, onValueChange }: RpeSliderProps) {
             const targetPos = (value / 10) * MAX_X;
             translateX.value = withTiming(targetPos, { duration: 200 });
         }
-    }, [value, isDragging]);
+    }, [MAX_X, isDragging, translateX, value]);
 
     const valueScaleStyle = useAnimatedStyle(() => ({
         transform: [{ scale: withSpring(isPressed.value ? 1.2 : 1) }]

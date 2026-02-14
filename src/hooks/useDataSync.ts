@@ -7,6 +7,11 @@ export function useDataSync() {
     const syncedRef = useRef(false);
 
     useEffect(() => {
+        if (!user) {
+            syncedRef.current = false;
+            return;
+        }
+
         if (user && !syncedRef.current) {
             console.log('[useDataSync] Triggering initial data sync (last 30 days)...');
             syncWorkoutsFromSupabase(30)

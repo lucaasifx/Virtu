@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Alert } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing } from '@/src/constants/theme';
 import SelectionHeader from '@/components/features/Workout/SelectionHeader';
 import ExerciseList from '@/components/features/Workout/ExerciseList';
 import { useWorkoutCreation } from '@/src/context/WorkoutContext';
-import { useActiveWorkout } from '@/src/context/ActiveWorkoutContext'; // Add import
+import { useActiveWorkout } from '@/src/context/ActiveWorkoutContext';
 import { EXERCISES_BY_GROUP } from '@/src/constants/exercises';
-import { Button } from '@/components/ui/Button';
 import { MuscleGroup } from '@/src/types/workout';
+import WorkoutActionButton from '@/components/features/Workout/WorkoutActionButton';
 
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 
@@ -21,6 +21,9 @@ export default function ExerciseSelectionScreen() {
     const { selectedGroups, toggleExerciseSelection, selections } = useWorkoutCreation();
 
     const { session, toggleExercise } = useActiveWorkout();
+    const [search, setSearch] = useState('');
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [pendingRemovalId, setPendingRemovalId] = useState<string | null>(null);
 
     let currentGroup: MuscleGroup | null = null;
 
@@ -36,11 +39,7 @@ export default function ExerciseSelectionScreen() {
         }
     }
 
-    if (!currentGroup) {
-        return <View style={styles.container} />;
-    }
-
-    const exercises = EXERCISES_BY_GROUP[currentGroup] || [];
+    const exercises = currentGroup ? (EXERCISES_BY_GROUP[currentGroup] || []) : [];
 
     let selectedIds: string[] = [];
     let handleToggle = (id: string) => { };
@@ -62,15 +61,15 @@ export default function ExerciseSelectionScreen() {
             };
         }
     } else {
-        selectedIds = selections[currentGroup] || [];
+        selectedIds = currentGroup ? (selections[currentGroup] || []) : [];
         handleToggle = (id: string) => {
             if (currentGroup) toggleExerciseSelection(currentGroup, id);
         };
     }
 
-    const [search, setSearch] = useState('');
-    const [showConfirmModal, setShowConfirmModal] = useState(false);
-    const [pendingRemovalId, setPendingRemovalId] = useState<string | null>(null);
+    if (!currentGroup) {
+        return <View style={styles.container} />;
+    }
 
     const filteredExercises = exercises.filter(ex =>
         ex.name.toLowerCase().includes(search.toLowerCase())
@@ -124,7 +123,7 @@ export default function ExerciseSelectionScreen() {
                 />
 
                 <View style={styles.footer}>
-                    <Button
+                    <WorkoutActionButton
                         title={buttonTitle}
                         onPress={handleNext}
                         disabled={!isEditMode && selectedIds.length === 0}
@@ -168,6 +167,5 @@ const styles = StyleSheet.create({
         paddingBottom: Spacing.md,
         borderTopWidth: 1,
         borderTopColor: Colors.gray[100],
-        backgroundColor: Colors.background,
     }
 });

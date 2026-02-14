@@ -53,7 +53,7 @@ export default function AuthScreen() {
             -1,
             true
         );
-    }, []);
+    }, [pulseScale]);
 
     const pulseStyle = useAnimatedStyle(() => ({
         transform: [{ scale: pulseScale.value }],
@@ -454,6 +454,5 @@ const styles = StyleSheet.create({
         color: Colors.primary,
     },
 });
-
 
 

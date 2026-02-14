@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View, Text } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, withTiming, useSharedValue } from 'react-native-reanimated';
 import { Colors } from '@/src/constants/theme';
 
@@ -20,7 +20,7 @@ export function ProgressRing({
 
     React.useEffect(() => {
         animatedProgress.value = withTiming(progress / 100, { duration: 800 });
-    }, [progress]);
+    }, [animatedProgress, progress]);
 
     const animatedStyle = useAnimatedStyle(() => ({
         width: `${animatedProgress.value * 100}%`,

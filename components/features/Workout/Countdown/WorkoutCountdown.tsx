@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, StyleSheet, Dimensions, Platform } from 'react-native';
+import { View, StyleSheet, Dimensions } from 'react-native';
 import { Colors } from "@/src/constants/theme";
 import Animated, {
     useAnimatedStyle,
@@ -39,7 +39,7 @@ export function WorkoutCountdown() {
             startWorkout(allExercises, selectedGroups);
             router.replace('/workout/Execution');
         }
-    }, [phase]);
+    }, [phase, router, selectedGroups, selections, startWorkout]);
 
 
     if (phase === 'completed') {

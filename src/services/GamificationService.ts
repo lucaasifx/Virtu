@@ -1,7 +1,6 @@
 import {
     XP_REWARDS,
     LEVEL_THRESHOLDS,
-    XPEvent,
     LevelInfo,
     Achievement,
     AchievementId,
@@ -78,12 +77,12 @@ export function checkLevelUp(oldXP: number, newXP: number): LevelInfo | null {
     return null;
 }
 
-export function updateStreak(lastWorkoutDate: string | null): { newStreak: number; streakBroken: boolean } {
+export function updateStreak(lastWorkoutDate: string | null): { increment: number; streakBroken: boolean } {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
     if (!lastWorkoutDate) {
-        return { newStreak: 1, streakBroken: false };
+        return { increment: 1, streakBroken: false };
     }
 
     const lastDate = new Date(lastWorkoutDate);
@@ -93,11 +92,11 @@ export function updateStreak(lastWorkoutDate: string | null): { newStreak: numbe
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
     if (diffDays === 0) {
-        return { newStreak: 0, streakBroken: false };
+        return { increment: 0, streakBroken: false };
     } else if (diffDays === 1) {
-        return { newStreak: 1, streakBroken: false };
+        return { increment: 1, streakBroken: false };
     } else {
-        return { newStreak: 1, streakBroken: true };
+        return { increment: 1, streakBroken: true };
     }
 }
 

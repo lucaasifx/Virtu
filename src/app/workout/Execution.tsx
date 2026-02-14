@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, BackHandler, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, BackHandler } from 'react-native';
 import { Colors } from "@/src/constants/theme";
 import { useActiveWorkout } from '@/src/context/ActiveWorkoutContext';
 import { Redirect, useRouter } from 'expo-router';

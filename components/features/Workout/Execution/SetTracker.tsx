@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Pressable } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { RectButton } from 'react-native-gesture-handler';
 import { ThemedText as Text } from "@/components/ui/ThemedText";
 import { Colors, Spacing } from "@/src/constants/theme";

@@ -30,6 +30,7 @@ export interface Database {
                     avatar_url?: string | null
                     updated_at?: string
                 }
+                Relationships: []
             }
             gamification: {
                 Row: {
@@ -57,6 +58,7 @@ export interface Database {
                     last_workout_date?: string | null
                     updated_at?: string
                 }
+                Relationships: []
             }
             user_achievements: {
                 Row: {
@@ -75,6 +77,7 @@ export interface Database {
                     achievement_id?: string
                     unlocked_at?: string
                 }
+                Relationships: []
             }
             workouts: {
                 Row: {
@@ -84,7 +87,9 @@ export interface Database {
                     ended_at: string | null
                     duration_seconds: number | null
                     total_volume: number | null
+                    total_sets: number | null
                     muscle_groups: string[]
+                    exercises_data: Json | null
                     status: string
                     created_at: string
                 }
@@ -95,7 +100,9 @@ export interface Database {
                     ended_at?: string | null
                     duration_seconds?: number | null
                     total_volume?: number | null
+                    total_sets?: number | null
                     muscle_groups?: string[]
+                    exercises_data?: Json | null
                     status?: string
                     created_at?: string
                 }
@@ -103,38 +110,11 @@ export interface Database {
                     ended_at?: string | null
                     duration_seconds?: number | null
                     total_volume?: number | null
+                    total_sets?: number | null
+                    exercises_data?: Json | null
                     status?: string
                 }
-            }
-            workout_sets: {
-                Row: {
-                    id: string
-                    workout_id: string
-                    exercise_id: string
-                    set_number: number | null
-                    weight: number | null
-                    reps: number | null
-                    rpe: number | null
-                    completed_at: string | null
-                    is_extra: boolean
-                }
-                Insert: {
-                    id?: string
-                    workout_id: string
-                    exercise_id: string
-                    set_number?: number | null
-                    weight?: number | null
-                    reps?: number | null
-                    rpe?: number | null
-                    completed_at?: string | null
-                    is_extra?: boolean
-                }
-                Update: {
-                    weight?: number | null
-                    reps?: number | null
-                    rpe?: number | null
-                    is_extra?: boolean
-                }
+                Relationships: []
             }
         }
         Views: {

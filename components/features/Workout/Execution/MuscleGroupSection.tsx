@@ -1,7 +1,7 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { ThemedText as Text } from "@/components/ui/ThemedText";
-import { Colors, Spacing } from "@/src/constants/theme";
+import { Colors } from "@/src/constants/theme";
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { ExerciseSession } from '@/src/types/execution';
 import { MuscleGroup } from '@/src/types/workout';
