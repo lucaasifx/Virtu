@@ -12,6 +12,7 @@ export class NotificationService {
     private static workoutNotificationId: string | null = null;
     private static Notifications: typeof Notifications | null = null;
     private static lastWorkoutPayload: { title: string; subtitle: string; body: string; isPaused: boolean } | null = null;
+    private static readonly WORKOUT_NOTIFICATION_TYPE = 'workout_status';
 
     static init() {
         if (this.isInitialized) return;
@@ -88,6 +89,7 @@ export class NotificationService {
         }
 
         try {
+            await this.dismissPresentedWorkoutNotifications();
             if (this.workoutNotificationId) {
                 await this.Notifications.dismissNotificationAsync(this.workoutNotificationId);
             }
@@ -96,7 +98,7 @@ export class NotificationService {
                     title: title,
                     subtitle,
                     body,
-                    data: { type: 'workout_status' },
+                    data: { type: this.WORKOUT_NOTIFICATION_TYPE },
                     sticky: true,
                     autoDismiss: false,
                     color: '#000000',
@@ -114,11 +116,30 @@ export class NotificationService {
     static async dismissWorkoutNotification() {
         if (!this.Notifications) return;
         try {
+            await this.dismissPresentedWorkoutNotifications();
             if (this.workoutNotificationId) {
                 await this.Notifications.dismissNotificationAsync(this.workoutNotificationId);
                 this.workoutNotificationId = null;
             }
             this.lastWorkoutPayload = null;
+        } catch {
+        }
+    }
+
+    private static async dismissPresentedWorkoutNotifications() {
+        if (!this.Notifications) return;
+
+        try {
+            const presented = await this.Notifications.getPresentedNotificationsAsync();
+
+            await Promise.all(
+                presented
+                    .filter((notification) => {
+                        const type = notification.request.content.data?.type;
+                        return type === this.WORKOUT_NOTIFICATION_TYPE;
+                    })
+                    .map((notification) => this.Notifications?.dismissNotificationAsync(notification.request.identifier))
+            );
         } catch {
         }
     }

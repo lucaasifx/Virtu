@@ -13,11 +13,7 @@ export function useDataSync() {
         }
 
         if (user && !syncedRef.current) {
-            console.log('[useDataSync] Triggering initial data sync (last 30 days)...');
             syncWorkoutsFromSupabase(30)
-                .then(() => {
-                    console.log('[useDataSync] Initial sync completed.');
-                })
                 .catch(err => {
                     console.error('[useDataSync] Sync failed:', err);
                 });

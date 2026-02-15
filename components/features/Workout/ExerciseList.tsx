@@ -75,6 +75,18 @@ export default function ExerciseList({
     onToggle,
     listHeaderComponent
 }: ExerciseListProps) {
+    const selectedSet = React.useMemo(() => new Set(selectedIds), [selectedIds]);
+
+    const renderItem = React.useCallback(({ item }: { item: Exercise }) => (
+        <ExerciseItem
+            item={item}
+            isSelected={selectedSet.has(item.id)}
+            onToggle={() => onToggle(item.id)}
+        />
+    ), [onToggle, selectedSet]);
+
+    const itemSeparator = React.useCallback(() => <View style={styles.separator} />, []);
+
     return (
         <FlatList
             data={exercises}
@@ -82,14 +94,12 @@ export default function ExerciseList({
             ListHeaderComponent={listHeaderComponent}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
-            renderItem={({ item }) => (
-                <ExerciseItem
-                    item={item}
-                    isSelected={selectedIds.includes(item.id)}
-                    onToggle={() => onToggle(item.id)}
-                />
-            )}
-            ItemSeparatorComponent={() => <View style={styles.separator} />}
+            renderItem={renderItem}
+            ItemSeparatorComponent={itemSeparator}
+            initialNumToRender={14}
+            windowSize={9}
+            maxToRenderPerBatch={16}
+            removeClippedSubviews
         />
     );
 }

@@ -31,19 +31,16 @@ export default function WorkoutSummaryScreen() {
     useEffect(() => {
         if (!hasRecorded.current) {
             hasRecorded.current = true;
-            console.log('[Summary] Recording workout...');
             const result = recordWorkoutComplete({
                 totalSets,
                 isPR: false,
                 isFirstWorkout: state.xpHistory.length === 0,
             });
-            console.log('[Summary] XP earned:', result.xpEarned, 'Level up:', result.levelUp);
             setXpEarned(result.xpEarned);
             if (result.levelUp) {
                 setLevelUp(result.levelUp);
             }
             setTimeout(() => {
-                console.log('[Summary] Setting showXPPopup to true');
                 setShowXPPopup(true);
             }, 800);
         }
@@ -84,8 +81,7 @@ export default function WorkoutSummaryScreen() {
             if (!result.canceled) {
                 setImage(result.assets[0].uri);
             }
-        } catch (e) {
-            console.log(e);
+        } catch {
         }
     };
 
@@ -105,8 +101,7 @@ export default function WorkoutSummaryScreen() {
             if (!result.canceled) {
                 setImage(result.assets[0].uri);
             }
-        } catch (e) {
-            console.log(e);
+        } catch {
         }
     };
 

@@ -129,12 +129,10 @@ export function ActiveWorkoutProvider({ children, onWorkoutEnd }: ActiveWorkoutP
     }, []);
 
     const logSet = useCallback((weight: number, reps: number, rpe: number) => {
-        console.log('[ActiveWorkout] 📥 logSet called with:', { weight, reps, rpe }, 'at', new Date().toISOString());
         const currentSession = sessionRef.current;
         const currentIndex = activeIndexRef.current;
 
         if (!currentSession) {
-            console.log('[ActiveWorkout] ❌ No session found!');
             return;
         }
 
@@ -148,8 +146,6 @@ export function ActiveWorkoutProvider({ children, onWorkoutEnd }: ActiveWorkoutP
 
         setSession(newState.session);
         setActiveExerciseIndex(newState.activeExerciseIndex);
-        console.log('[ActiveWorkout] ✅ Set registered! New sets count:',
-            newState.session?.exercises[newState.session.exerciseOrder[currentIndex]]?.sets.length);
     }, []);
 
     const togglePause = useCallback(() => {
@@ -214,7 +210,6 @@ export function ActiveWorkoutProvider({ children, onWorkoutEnd }: ActiveWorkoutP
 
 
     const cancelWorkout = useCallback(() => {
-        console.log('[Workout] ❌ Treino cancelado');
         onWorkoutEnd?.();
         sessionRef.current = null;
         activeIndexRef.current = 0;

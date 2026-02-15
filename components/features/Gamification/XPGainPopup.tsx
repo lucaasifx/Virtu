@@ -68,8 +68,6 @@ export function XPGainPopup({ amount, visible, onComplete }: XPGainPopupProps) {
 
     if (!visible) return null;
 
-    console.log('[XPGainPopup] Rendering with amount:', amount, 'visible:', visible);
-
     return (
         <View style={[styles.wrapper, { top: insets.top + 80 }]} pointerEvents="none">
             <Animated.View style={[styles.container, containerStyle]}>

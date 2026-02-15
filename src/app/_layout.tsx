@@ -8,8 +8,7 @@ import { Ionicons, Feather } from "@expo/vector-icons";
 import { useFonts } from "expo-font";
 import { ThemeFonts, Colors } from "@/src/constants/theme";
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { ActiveWorkoutProvider } from "@/src/context/ActiveWorkoutContext";
-import { WorkoutProvider, useWorkoutCreation } from "@/src/context/WorkoutContext";
+import { WorkoutProvider } from "@/src/context/WorkoutContext";
 import { GamificationProvider } from "@/src/context/GamificationContext";
 import { AuthProvider, useAuth } from "@/src/context/AuthContext";
 import { ThemeProvider, useAppTheme } from "@/src/context/ThemeContext";
@@ -18,15 +17,6 @@ import { useDataSync } from "@/src/hooks/useDataSync";
 SplashScreen.preventAutoHideAsync();
 
 const DARK_SCREENS = ['FinishSelection', 'Countdown', 'Execution'];
-
-function ActiveWorkoutBridge({ children }: { children: React.ReactNode }) {
-  const { resetWorkout } = useWorkoutCreation();
-  return (
-    <ActiveWorkoutProvider onWorkoutEnd={resetWorkout}>
-      {children}
-    </ActiveWorkoutProvider>
-  );
-}
 
 function AuthGate({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
@@ -76,15 +66,13 @@ function AppContent({ isDarkScreen }: { isDarkScreen: boolean }) {
         <AuthGate>
           <GamificationProvider>
             <WorkoutProvider>
-              <ActiveWorkoutBridge>
-                <DataSyncWrapper>
-                  <Stack screenOptions={{ headerShown: false }}>
-                    <Stack.Screen name="index" />
-                    <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-                    <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                  </Stack>
-                </DataSyncWrapper>
-              </ActiveWorkoutBridge>
+              <DataSyncWrapper>
+                <Stack screenOptions={{ headerShown: false }}>
+                  <Stack.Screen name="index" />
+                  <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                </Stack>
+              </DataSyncWrapper>
             </WorkoutProvider>
           </GamificationProvider>
         </AuthGate>

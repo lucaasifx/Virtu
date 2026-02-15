@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet, FlatList } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Header } from '@/components/ui/Header';
 import { useGamification } from '@/src/context/GamificationContext';
@@ -35,20 +35,23 @@ export default function Home() {
                 }}
             />
 
-            <ScrollView
+            <FlatList
+                data={[]}
+                keyExtractor={(_, index) => `home-${index}`}
                 contentContainerStyle={[styles.content, { paddingTop: insets.top + 140 }]}
                 showsVerticalScrollIndicator={false}
-            >
-                <Greetings />
-                <CalendarStrip />
-                <DailyMissionCard />
-
-                <HabitList habits={habits} onToggleHabit={toggleHabit} />
-
-                <CoachTip tip="A consistência supera a intensidade. Não importa o quão rápido você vai, desde que você não pare." />
-
-                <View style={{ height: 150 }} />
-            </ScrollView>
+                renderItem={() => null}
+                ListHeaderComponent={(
+                    <>
+                        <Greetings />
+                        <CalendarStrip />
+                        <DailyMissionCard />
+                        <HabitList habits={habits} onToggleHabit={toggleHabit} />
+                        <CoachTip tip="A consistência supera a intensidade. Não importa o quão rápido você vai, desde que você não pare." />
+                    </>
+                )}
+                ListFooterComponent={<View style={{ height: 150 }} />}
+            />
         </View>
     );
 }

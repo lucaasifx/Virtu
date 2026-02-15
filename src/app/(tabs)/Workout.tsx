@@ -3,7 +3,7 @@ import {
     View,
     Text,
     StyleSheet,
-    ScrollView,
+    FlatList,
     Pressable,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -63,20 +63,24 @@ export default function Workout() {
                 }}
             />
 
-            <ScrollView contentContainerStyle={[styles.listContent, { paddingTop: insets.top + 140 }]}>
-
-                <WorkoutHeader />
-
-                <CategorySelector
-                    categories={categories}
-                    activeCategory={activeCategory}
-                    onSelectCategory={setActiveCategory}
-                />
-
-                <View style={styles.cardsContainer}>
-                    {filteredWorkouts.map((workout) => (
+            <FlatList
+                data={filteredWorkouts}
+                keyExtractor={(item) => item.id}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={[styles.listContent, { paddingTop: insets.top + 140 }]}
+                ListHeaderComponent={(
+                    <>
+                        <WorkoutHeader />
+                        <CategorySelector
+                            categories={categories}
+                            activeCategory={activeCategory}
+                            onSelectCategory={setActiveCategory}
+                        />
+                    </>
+                )}
+                renderItem={({ item: workout }) => (
+                    <View style={styles.cardItem}>
                         <WorkoutCard
-                            key={workout.id}
                             workout={{
                                 id: workout.id,
                                 title: workout.title,
@@ -89,31 +93,31 @@ export default function Workout() {
                             onPlay={() => handlePlayRoutine(workout.id)}
                             onEdit={() => handleEditRoutine(workout.id)}
                         />
-                    ))}
+                    </View>
+                )}
+                ListEmptyComponent={isEmptyCategory ? (
+                    <Animated.View entering={FadeInDown.duration(420)} style={styles.emptyStateCard}>
+                        <Animated.View entering={ZoomIn.duration(420)} style={styles.emptyIconWrapper}>
+                            <View style={[styles.bracket, styles.bracketTopLeft]} />
+                            <View style={[styles.bracket, styles.bracketBottomRight]} />
 
-                    {isEmptyCategory && (
-                        <Animated.View entering={FadeInDown.duration(420)} style={styles.emptyStateCard}>
-                            <Animated.View entering={ZoomIn.duration(420)} style={styles.emptyIconWrapper}>
-                                <View style={[styles.bracket, styles.bracketTopLeft]} />
-                                <View style={[styles.bracket, styles.bracketBottomRight]} />
+                            <View style={styles.emptyIconCircle}>
+                                <Ionicons name="barbell-outline" size={40} color={Colors.primary} />
+                            </View>
 
-                                <View style={styles.emptyIconCircle}>
-                                    <Ionicons name="barbell-outline" size={40} color={Colors.primary} />
-                                </View>
-
-                                <View style={styles.emptyBadge}>
-                                    <Ionicons name="sparkles" size={14} color="#111827" />
-                                </View>
-                            </Animated.View>
-
-                            <Text style={styles.emptyTitle}>SEM TREINOS NESSA CATEGORIA</Text>
-                            <View style={styles.emptyDivider} />
-                            <Text style={styles.emptyDescription}>
-                                Monte uma rotina nova e preencha essa aba com progresso real.
-                            </Text>
+                            <View style={styles.emptyBadge}>
+                                <Ionicons name="sparkles" size={14} color="#111827" />
+                            </View>
                         </Animated.View>
-                    )}
 
+                        <Text style={styles.emptyTitle}>SEM TREINOS NESSA CATEGORIA</Text>
+                        <View style={styles.emptyDivider} />
+                        <Text style={styles.emptyDescription}>
+                            Monte uma rotina nova e preencha essa aba com progresso real.
+                        </Text>
+                    </Animated.View>
+                ) : null}
+                ListFooterComponent={(
                     <Pressable
                         onPress={handleCreateRoutine}
                         style={styles.createButton}
@@ -142,8 +146,8 @@ export default function Workout() {
                             </View>
                         )}
                     </Pressable>
-                </View>
-            </ScrollView>
+                )}
+            />
         </View>
     );
 }
@@ -160,8 +164,8 @@ const styles = StyleSheet.create({
     headerSpacer: {
         height: 20
     },
-    cardsContainer: {
-        gap: 32,
+    cardItem: {
+        marginBottom: 32,
     },
     createButton: {
         marginTop: 24,
