@@ -14,8 +14,7 @@ CREATE TABLE IF NOT EXISTS profiles (
 
 -- 2. GAMIFICATION TABLE
 CREATE TABLE IF NOT EXISTS gamification (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE UNIQUE,
+    user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     total_xp INTEGER DEFAULT 0,
     current_level INTEGER DEFAULT 1,
     streak INTEGER DEFAULT 0,

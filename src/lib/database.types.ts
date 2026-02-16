@@ -34,7 +34,6 @@ export interface Database {
             }
             gamification: {
                 Row: {
-                    id: string
                     user_id: string
                     total_xp: number
                     current_level: number
@@ -43,7 +42,6 @@ export interface Database {
                     updated_at: string
                 }
                 Insert: {
-                    id?: string
                     user_id: string
                     total_xp?: number
                     current_level?: number

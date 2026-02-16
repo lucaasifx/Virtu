@@ -18,8 +18,11 @@ import {
     calculatePRBonus,
     getXPProgress,
 } from '@/src/services/GamificationService';
+import { useAuth } from '@/src/context/AuthContext';
+import { supabase } from '@/src/lib/supabase';
+import { syncGamificationToSupabase } from '@/src/lib/workoutSyncService';
 
-const STORAGE_KEY = '@virtu_gamification';
+const STORAGE_KEY_PREFIX = '@virtu_gamification';
 
 type GamificationAction =
     | { type: 'LOAD_STATE'; payload: GamificationState }
@@ -80,37 +83,139 @@ interface GamificationContextType {
 
 const GamificationContext = createContext<GamificationContextType | null>(null);
 
+interface RemoteGamificationState {
+    total_xp: number;
+    current_level: number;
+    streak: number;
+    last_workout_date: string | null;
+}
+
+function getStorageKey(userId: string) {
+    return `${STORAGE_KEY_PREFIX}:${userId}`;
+}
+
+function getTimeFromISO(value: string | null) {
+    if (!value) {
+        return 0;
+    }
+    const time = new Date(value).getTime();
+    return Number.isNaN(time) ? 0 : time;
+}
+
+function getMostRecentDate(first: string | null, second: string | null): string | null {
+    const firstTime = getTimeFromISO(first);
+    const secondTime = getTimeFromISO(second);
+
+    if (firstTime === 0 && secondTime === 0) {
+        return null;
+    }
+
+    if (secondTime > firstTime) {
+        return second;
+    }
+
+    return first;
+}
+
+function mergeGamificationState(local: GamificationState | null, remote: RemoteGamificationState | null): GamificationState {
+    const localState = local ?? createInitialState();
+    if (!remote) {
+        const normalizedLevel = getLevelFromXP(localState.totalXP).level;
+        return {
+            ...localState,
+            currentLevel: normalizedLevel,
+        };
+    }
+
+    const localXP = Math.max(0, localState.totalXP);
+    const remoteXP = Math.max(0, remote.total_xp);
+    const totalXP = Math.max(localXP, remoteXP);
+    const streak = Math.max(localState.streak, Math.max(0, remote.streak));
+    const lastWorkoutDate = getMostRecentDate(localState.lastWorkoutDate, remote.last_workout_date);
+    const currentLevel = getLevelFromXP(totalXP).level;
+
+    return {
+        ...localState,
+        totalXP,
+        streak,
+        lastWorkoutDate,
+        currentLevel,
+    };
+}
+
 export function GamificationProvider({ children }: { children: ReactNode }) {
+    const { user } = useAuth();
+    const userId = user?.id ?? null;
     const [state, dispatch] = useReducer(gamificationReducer, createInitialState());
     const [isLoaded, setIsLoaded] = React.useState(false);
 
     useEffect(() => {
+        let active = true;
+
+        const loadState = async () => {
+            setIsLoaded(false);
+
+            if (!userId) {
+                if (active) {
+                    dispatch({ type: 'LOAD_STATE', payload: createInitialState() });
+                    setIsLoaded(true);
+                }
+                return;
+            }
+
+            const storageKey = getStorageKey(userId);
+
+            try {
+                const [stored, legacyStored, remoteResponse] = await Promise.all([
+                    AsyncStorage.getItem(storageKey),
+                    AsyncStorage.getItem(STORAGE_KEY_PREFIX),
+                    supabase
+                        .from('gamification')
+                        .select('total_xp, current_level, streak, last_workout_date')
+                        .eq('user_id', userId)
+                        .maybeSingle(),
+                ]);
+
+                const rawLocalState = stored ?? legacyStored;
+                const localState = rawLocalState ? (JSON.parse(rawLocalState) as GamificationState) : null;
+                const remoteState = remoteResponse.data as RemoteGamificationState | null;
+                const mergedState = mergeGamificationState(localState, remoteState);
+
+                if (active) {
+                    dispatch({ type: 'LOAD_STATE', payload: mergedState });
+                }
+
+                if (!stored && legacyStored) {
+                    await AsyncStorage.setItem(storageKey, legacyStored);
+                }
+            } catch (e) {
+                console.error('Failed to load gamification state:', e);
+                if (active) {
+                    dispatch({ type: 'LOAD_STATE', payload: createInitialState() });
+                }
+            } finally {
+                if (active) {
+                    setIsLoaded(true);
+                }
+            }
+        };
+
         loadState();
-    }, []);
+
+        return () => {
+            active = false;
+        };
+    }, [userId]);
 
     useEffect(() => {
-        if (isLoaded) {
-            saveState(state);
+        if (isLoaded && userId) {
+            saveState(state, userId);
         }
-    }, [state, isLoaded]);
+    }, [state, isLoaded, userId]);
 
-    const loadState = async () => {
+    const saveState = async (stateToSave: GamificationState, storageUserId: string) => {
         try {
-            const stored = await AsyncStorage.getItem(STORAGE_KEY);
-            if (stored) {
-                const parsed = JSON.parse(stored) as GamificationState;
-                dispatch({ type: 'LOAD_STATE', payload: parsed });
-            }
-        } catch (e) {
-            console.error('Failed to load gamification state:', e);
-        } finally {
-            setIsLoaded(true);
-        }
-    };
-
-    const saveState = async (stateToSave: GamificationState) => {
-        try {
-            await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
+            await AsyncStorage.setItem(getStorageKey(storageUserId), JSON.stringify(stateToSave));
         } catch (e) {
             console.error('Failed to save gamification state:', e);
         }
@@ -169,13 +274,26 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
         };
 
         const levelUp = awardXP(event);
+        const nextTotalXP = state.totalXP + xpEarned;
+        const nextLevel = getLevelFromXP(nextTotalXP).level;
+
+        if (userId) {
+            syncGamificationToSupabase(
+                nextTotalXP,
+                nextLevel,
+                nextStreak,
+                userId
+            ).catch((e) => {
+                console.error('Failed to sync gamification state:', e);
+            });
+        }
 
         return {
             xpEarned,
             levelUp,
             newAchievements,
         };
-    }, [state, awardXP]);
+    }, [state, awardXP, userId]);
 
     const levelInfo = getLevelFromXP(state.totalXP);
     const xpProgress = getXPProgress(state.totalXP);
