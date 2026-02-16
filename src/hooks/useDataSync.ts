@@ -1,24 +1,25 @@
 import { useEffect, useRef } from 'react';
-import { syncWorkoutsFromSupabase } from '@/src/lib/workoutSyncService';
+import { syncWorkoutsFromSupabaseForUser } from '@/src/lib/workoutSyncService';
 import { useAuth } from '@/src/context/AuthContext';
 
 export function useDataSync() {
     const { user } = useAuth();
+    const userId = user?.id ?? null;
     const syncedRef = useRef(false);
 
     useEffect(() => {
-        if (!user) {
+        if (!userId) {
             syncedRef.current = false;
             return;
         }
 
-        if (user && !syncedRef.current) {
-            syncWorkoutsFromSupabase(30)
+        if (!syncedRef.current) {
+            syncWorkoutsFromSupabaseForUser(userId, 30)
                 .catch(err => {
                     console.error('[useDataSync] Sync failed:', err);
                 });
 
             syncedRef.current = true;
         }
-    }, [user]);
+    }, [userId]);
 }

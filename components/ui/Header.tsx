@@ -1,11 +1,25 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, StyleSheet, Image, Modal, Pressable, TouchableOpacity } from 'react-native';
 import { ThemedText as Text } from '@/components/ui/ThemedText';
 import { Colors, FontFamily } from '@/src/constants/theme';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import Svg, { Circle } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BlurView } from 'expo-blur';
-import Animated, { SlideInRight, SlideOutRight } from 'react-native-reanimated';
+import { getUserClass, USER_CLASSES } from '@/src/constants/classes';
+
+import Animated, {
+    cancelAnimation,
+    Easing,
+    FadeInDown,
+    SlideInRight,
+    SlideOutRight,
+    useAnimatedStyle,
+    useSharedValue,
+    withRepeat,
+    withSequence,
+    withTiming
+} from 'react-native-reanimated';
 import { useAuth } from '@/src/context/AuthContext';
 import { Href, useRouter } from 'expo-router';
 import { ThemeMode, useAppTheme } from '@/src/context/ThemeContext';
@@ -36,25 +50,27 @@ type ThemeOption = {
     icon: React.ComponentProps<typeof Ionicons>['name'];
 };
 
+
+
 const MENU_ITEMS: MenuItem[] = [
     {
         id: 'workout',
-        title: 'Área de Treino',
-        subtitle: 'Ir para rotinas e execução',
+        title: 'Area de Treino',
+        subtitle: 'Ir para rotinas e execucao',
         icon: 'barbell-outline',
         route: '/(tabs)/Workout',
     },
     {
         id: 'home',
-        title: 'Início',
-        subtitle: 'Resumo e missão diária',
+        title: 'Inicio',
+        subtitle: 'Resumo e missao diaria',
         icon: 'home-outline',
         route: '/(tabs)/Home',
     },
     {
         id: 'settings',
-        title: 'Configurações',
-        subtitle: 'Preferências da conta',
+        title: 'Configuracoes',
+        subtitle: 'Preferencias da conta',
         icon: 'settings-outline',
         disabled: true,
     },
@@ -85,12 +101,18 @@ const THEME_OPTIONS: ThemeOption[] = [
     },
 ];
 
-export function Header({ stats }: HeaderProps) {
+
+
+function HeaderComponent({ stats }: HeaderProps) {
     const insets = useSafeAreaInsets();
     const router = useRouter();
     const { user, signOut } = useAuth();
     const { themeMode, resolvedTheme, setThemeMode } = useAppTheme();
     const [menuVisible, setMenuVisible] = useState(false);
+    const [levelCardVisible, setLevelCardVisible] = useState(false);
+    const badgePulse = useSharedValue(1);
+    const beamTranslateX = useSharedValue(-120);
+
     const isDarkTheme = resolvedTheme === 'dark';
     const palette = useMemo(() => {
         if (isDarkTheme) {
@@ -124,6 +146,7 @@ export function Header({ stats }: HeaderProps) {
                 soonText: '#E5E7EB',
             };
         }
+
         return {
             headerBg: 'rgba(255,255,255,0.85)',
             headerBorder: '#F3F4F6',
@@ -154,8 +177,21 @@ export function Header({ stats }: HeaderProps) {
             soonText: '#374151',
         };
     }, [isDarkTheme]);
+
     const xpPercentage = Math.min(100, Math.max(0, (stats.xp / stats.maxXp) * 100));
+    const xpRemaining = Math.max(0, stats.maxXp - stats.xp);
+    const streakGoal = stats.streak < 7 ? 7 : stats.streak + 3;
+    const userClass = useMemo(() => {
+        const level = stats.level;
+        const currentClass = getUserClass(level);
+
+        const sorted = [...USER_CLASSES].sort((a, b) => a.minLevel - b.minLevel);
+        const currentIndex = sorted.findIndex((item) => item.title === currentClass.title);
+        const next = currentIndex >= 0 && currentIndex < sorted.length - 1 ? sorted[currentIndex + 1] : null;
+        return { current: currentClass, next, currentIndex };
+    }, [stats.level]);
     const email = user?.email ?? 'atleta@virtu.app';
+
     const displayName = useMemo(() => {
         const candidate = user?.user_metadata?.full_name;
         if (typeof candidate === 'string' && candidate.trim().length > 0) {
@@ -163,6 +199,7 @@ export function Header({ stats }: HeaderProps) {
         }
         return email.split('@')[0];
     }, [email, user?.user_metadata?.full_name]);
+
     const avatarUrl = useMemo(() => {
         const candidate = user?.user_metadata?.avatar_url;
         if (typeof candidate === 'string' && candidate.trim().length > 0) {
@@ -170,6 +207,7 @@ export function Header({ stats }: HeaderProps) {
         }
         return 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?q=80&w=1974&auto=format&fit=crop';
     }, [user?.user_metadata?.avatar_url]);
+
     const initials = useMemo(() => {
         const words = displayName.trim().split(/\s+/).filter(Boolean);
         const raw = words.slice(0, 2).map(word => word[0]?.toUpperCase() ?? '').join('');
@@ -191,18 +229,106 @@ export function Header({ stats }: HeaderProps) {
         await signOut();
     };
 
+    const handleThemeModeChange = (mode: ThemeMode) => {
+        setLevelCardVisible(false);
+        closeMenu();
+        requestAnimationFrame(() => {
+            setThemeMode(mode);
+        });
+    };
+    const nextClassLabel = userClass.next ? `${userClass.next.title} (Nv ${userClass.next.minLevel})` : 'Classe maxima';
+    const rankProgressPercent = Math.round(xpPercentage);
+
+    useEffect(() => {
+        if (!levelCardVisible) {
+            cancelAnimation(badgePulse);
+            cancelAnimation(beamTranslateX);
+            badgePulse.value = 1;
+            beamTranslateX.value = -120;
+            return;
+        }
+
+        badgePulse.value = withRepeat(
+            withSequence(
+                withTiming(1.15, { duration: 1200, easing: Easing.inOut(Easing.quad) }),
+                withTiming(1, { duration: 1200, easing: Easing.inOut(Easing.quad) })
+            ),
+            -1,
+            true
+        );
+
+        beamTranslateX.value = withRepeat(
+            withSequence(
+                withTiming(300, { duration: 1800, easing: Easing.linear }),
+                withTiming(-120, { duration: 0 })
+            ),
+            -1,
+            false
+        );
+    }, [badgePulse, beamTranslateX, levelCardVisible]);
+
+    const nodeGlowStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: badgePulse.value }]
+    }));
+
+    const beamStyle = useAnimatedStyle(() => ({
+        transform: [{ translateX: beamTranslateX.value }]
+    }));
+
     return (
         <>
-            <View style={[styles.container, { paddingTop: insets.top, backgroundColor: palette.headerBg, borderBottomColor: palette.headerBorder }]}>
-                <BlurView intensity={80} tint={isDarkTheme ? 'dark' : 'light'} style={styles.blurBackground} />
+            <View style={[
+                styles.container,
+                {
+                    paddingTop: insets.top,
+                    backgroundColor: palette.headerBg,
+                    borderBottomColor: palette.headerBorder
+                },
+                levelCardVisible && {
+                    borderBottomLeftRadius: 32,
+                    borderBottomRightRadius: 32,
+                    paddingBottom: 24,
+                    borderBottomWidth: 0,
+                    shadowColor: "#000",
+                    shadowOffset: { width: 0, height: 10 },
+                    shadowOpacity: 0.1,
+                    shadowRadius: 20,
+                    elevation: 10,
+                }
+            ]}>
+                <View style={[
+                    StyleSheet.absoluteFill,
+                    levelCardVisible && {
+                        borderBottomLeftRadius: 32,
+                        borderBottomRightRadius: 32,
+                        overflow: 'hidden',
+                    }
+                ]}>
+                    <BlurView
+                        intensity={80}
+                        tint={isDarkTheme ? 'dark' : 'light'}
+                        style={StyleSheet.absoluteFill}
+                    />
+                </View>
 
                 <View style={styles.content}>
                     <View style={styles.topRow}>
                         <View style={styles.levelContainer}>
-                            <View style={[styles.levelIconBox, { backgroundColor: palette.levelBoxBg, borderColor: palette.levelBoxBorder }]}>
-                                <Ionicons name="trophy" size={14} color="#FDCB13" />
-                            </View>
-                            <Text style={[styles.levelText, { color: palette.textPrimary }]}>Nível {stats.level}</Text>
+                            <TouchableOpacity
+                                activeOpacity={0.9}
+                                onPress={() => setLevelCardVisible((prev) => !prev)}
+                                style={[styles.levelTouch, { backgroundColor: palette.levelBoxBg, borderColor: palette.levelBoxBorder }]}
+                            >
+                                <View style={[styles.levelIconBox, { backgroundColor: palette.levelBoxBg, borderColor: palette.levelBoxBorder }]}>
+                                    <Ionicons name="trophy" size={14} color="#FDCB13" />
+                                </View>
+                                <Text style={[styles.levelText, { color: palette.textPrimary }]}>Nivel {stats.level}</Text>
+                                <Ionicons
+                                    name={levelCardVisible ? 'chevron-up' : 'chevron-down'}
+                                    size={14}
+                                    color={palette.textSecondary}
+                                />
+                            </TouchableOpacity>
                         </View>
 
                         <TouchableOpacity
@@ -245,6 +371,133 @@ export function Header({ stats }: HeaderProps) {
                             </View>
                         </View>
                     </View>
+
+                    {levelCardVisible ? (
+                        <Animated.View
+                            entering={FadeInDown.duration(220)}
+                            style={[styles.levelCard, { backgroundColor: palette.cardBg, borderColor: palette.cardBorder }]}
+                        >
+
+                            <View style={styles.hudStatusRow}>
+
+                                <View style={styles.hudRing}>
+                                    <Svg width={72} height={72} style={styles.hudRingSvg}>
+                                        <Circle cx={36} cy={36} r={31} stroke={palette.trackBg} strokeWidth={5} fill="none" />
+                                        <Circle cx={36} cy={36} r={31} stroke={Colors.primary} strokeWidth={5} fill="none" strokeDasharray={`${2 * Math.PI * 31}`} strokeDashoffset={`${2 * Math.PI * 31 * (1 - xpPercentage / 100)}`} strokeLinecap="round" transform="rotate(-90 36 36)" />
+                                    </Svg>
+                                    <View style={[styles.hudRingInner, { backgroundColor: palette.cardBg }]}>
+                                        <MaterialCommunityIcons name={userClass.current.icon} size={24} color={Colors.primary} />
+                                    </View>
+                                </View>
+
+
+                                <View style={styles.hudClassInfo}>
+                                    <Text style={[styles.hudClassTag, { color: palette.textMuted }]}>CLASSE ATUAL</Text>
+                                    <Text style={[styles.hudClassName, { color: palette.textPrimary }]}>Lv {stats.level}: {userClass.current.title}</Text>
+                                    <Text style={[styles.hudClassSummary, { color: palette.textSecondary }]} numberOfLines={2}>{userClass.current.summary}</Text>
+
+                                    <View style={styles.hudXpBarRow}>
+                                        <View style={[styles.hudXpTrack, { backgroundColor: palette.trackBg }]}>
+                                            <View style={[styles.hudXpFill, { width: `${xpPercentage}%` }]}>
+                                                <Animated.View style={[styles.hudXpBeam, beamStyle]} />
+                                            </View>
+                                        </View>
+                                        <Text style={[styles.hudXpLabel, { color: palette.textMuted }]}>{rankProgressPercent}%</Text>
+                                    </View>
+                                </View>
+                            </View>
+
+
+                            <View style={[styles.hudRoadmap, { backgroundColor: palette.cardBgMuted, borderColor: palette.cardBorder }]}>
+                                <Text style={[styles.hudRoadmapTitle, { color: palette.textMuted }]}>JORNADA DE CLASSES</Text>
+                                <View style={styles.hudRoadmapTrack}>
+                                    {USER_CLASSES.map((cls, index) => {
+                                        const isCompleted = index < userClass.currentIndex;
+                                        const isCurrent = index === userClass.currentIndex;
+                                        const isLast = index === USER_CLASSES.length - 1;
+
+                                        return (
+                                            <View key={cls.title} style={styles.hudRoadmapNodeGroup}>
+
+                                                <View style={styles.hudRoadmapNodeCol}>
+                                                    {isCurrent ? (
+                                                        <Animated.View style={[styles.hudRoadmapCurrentNode, nodeGlowStyle]}>
+                                                            <View style={styles.hudRoadmapCurrentNodeInner}>
+                                                                <MaterialCommunityIcons name={cls.icon} size={14} color="#111827" />
+                                                            </View>
+                                                        </Animated.View>
+                                                    ) : (
+                                                        <View style={[
+                                                            styles.hudRoadmapNode,
+                                                            isCompleted
+                                                                ? styles.hudRoadmapNodeDone
+                                                                : { borderColor: palette.trackBg, backgroundColor: 'transparent' }
+                                                        ]}>
+                                                            {isCompleted ? (
+                                                                <Ionicons name="checkmark" size={10} color="#111827" />
+                                                            ) : (
+                                                                <MaterialCommunityIcons name={cls.icon} size={10} color={palette.textMuted} />
+                                                            )}
+                                                        </View>
+                                                    )}
+                                                    <Text style={[
+                                                        styles.hudRoadmapLabel,
+                                                        { color: isCurrent ? Colors.primary : isCompleted ? palette.textSecondary : palette.textMuted }
+                                                    ]} numberOfLines={1}>{cls.title.split(' ')[0]}</Text>
+                                                </View>
+
+
+                                                {!isLast && (
+                                                    <View style={[
+                                                        styles.hudRoadmapLine,
+                                                        { backgroundColor: isCompleted ? Colors.primary : palette.trackBg }
+                                                    ]} />
+                                                )}
+                                            </View>
+                                        );
+                                    })}
+                                </View>
+                            </View>
+
+
+                            <View style={[styles.hudStatRow, { borderColor: palette.cardBorder }]}>
+                                <View style={styles.hudStatItem}>
+                                    <View style={styles.hudStatValueRow}>
+                                        <Ionicons name="flame" size={16} color={Colors.primary} />
+                                        <Text style={[styles.hudStatNumber, { color: palette.textPrimary }]}>{stats.streak}</Text>
+                                    </View>
+                                    <Text style={[styles.hudStatLabel, { color: palette.textMuted }]}>{stats.streak === 1 ? 'DIA' : 'DIAS'} STREAK</Text>
+                                </View>
+                                <View style={[styles.hudStatDivider, { backgroundColor: palette.cardBorder }]} />
+                                <View style={styles.hudStatItem}>
+                                    <View style={styles.hudStatValueRow}>
+                                        <Ionicons name="flash" size={16} color={Colors.primary} />
+                                        <Text style={[styles.hudStatNumber, { color: palette.textPrimary }]}>{xpRemaining}</Text>
+                                    </View>
+                                    <Text style={[styles.hudStatLabel, { color: palette.textMuted }]}>XP RESTANTE</Text>
+                                </View>
+                                <View style={[styles.hudStatDivider, { backgroundColor: palette.cardBorder }]} />
+                                <View style={styles.hudStatItem}>
+                                    <View style={styles.hudStatValueRow}>
+                                        <Ionicons name="flag" size={16} color={Colors.primary} />
+                                        <Text style={[styles.hudStatNumber, { color: palette.textPrimary }]}>{streakGoal}</Text>
+                                    </View>
+                                    <Text style={[styles.hudStatLabel, { color: palette.textMuted }]}>META STREAK</Text>
+                                </View>
+                            </View>
+
+
+                            <View style={[styles.hudMission, { backgroundColor: isDarkTheme ? '#1A1A1A' : '#111827' }]}>
+                                <View style={styles.hudMissionHeader}>
+                                    <Ionicons name="flash" size={14} color={Colors.primary} />
+                                    <Text style={styles.hudMissionTag}>MISSÃO ATIVA</Text>
+                                </View>
+                                <Text style={styles.hudMissionText}>
+                                    Complete <Text style={styles.hudMissionHighlight}>1 rotina completa</Text> para manter sua streak e subir rumo a {nextClassLabel}.
+                                </Text>
+                            </View>
+                        </Animated.View>
+                    ) : null}
                 </View>
             </View>
 
@@ -338,7 +591,7 @@ export function Header({ stats }: HeaderProps) {
                                                 }
                                             ]}
                                             activeOpacity={0.88}
-                                            onPress={() => setThemeMode(option.id)}
+                                            onPress={() => handleThemeModeChange(option.id)}
                                         >
                                             <Ionicons
                                                 name={option.icon}
@@ -356,7 +609,7 @@ export function Header({ stats }: HeaderProps) {
 
                         <TouchableOpacity style={[styles.logoutButton, { backgroundColor: palette.logoutBg, borderColor: palette.logoutBorder }]} onPress={handleSignOut} activeOpacity={0.9}>
                             <Ionicons name="log-out-outline" size={18} color={palette.logoutText} />
-                            <Text style={[styles.logoutText, { color: palette.logoutText }]}>Encerrar Sessão</Text>
+                            <Text style={[styles.logoutText, { color: palette.logoutText }]}>Encerrar Sessao</Text>
                         </TouchableOpacity>
                     </Animated.View>
                 </View>
@@ -364,6 +617,8 @@ export function Header({ stats }: HeaderProps) {
         </>
     );
 }
+
+export const Header = React.memo(HeaderComponent);
 
 const styles = StyleSheet.create({
     container: {
@@ -395,6 +650,15 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         gap: 8,
+    },
+    levelTouch: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        borderWidth: 1,
+        borderRadius: 18,
+        paddingRight: 10,
+        overflow: 'hidden',
     },
     levelIconBox: {
         width: 32,
@@ -470,6 +734,227 @@ const styles = StyleSheet.create({
         width: '100%',
         height: '100%',
         borderRadius: 18,
+    },
+    levelCard: {
+        marginTop: 12,
+        borderRadius: 18,
+        borderWidth: 1,
+        padding: 14,
+        gap: 14,
+    },
+
+    hudStatusRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 14,
+    },
+    hudRing: {
+        width: 72,
+        height: 72,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    hudRingSvg: {
+        position: 'absolute',
+    },
+    hudRingInner: {
+        width: 54,
+        height: 54,
+        borderRadius: 27,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    hudClassInfo: {
+        flex: 1,
+        gap: 3,
+    },
+    hudClassTag: {
+        fontSize: 9,
+        fontFamily: FontFamily.title.bold,
+        textTransform: 'uppercase',
+        letterSpacing: 1.2,
+    },
+    hudClassName: {
+        fontSize: 20,
+        fontFamily: FontFamily.title.extraBold,
+        textTransform: 'uppercase',
+        letterSpacing: 0.4,
+        lineHeight: 22,
+    },
+    hudClassSummary: {
+        fontSize: 11,
+        fontFamily: FontFamily.body.medium,
+        lineHeight: 15,
+    },
+    hudXpBarRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginTop: 4,
+    },
+    hudXpTrack: {
+        flex: 1,
+        height: 6,
+        borderRadius: 3,
+        overflow: 'hidden',
+    },
+    hudXpFill: {
+        height: '100%',
+        backgroundColor: Colors.primary,
+        borderRadius: 3,
+        overflow: 'hidden',
+    },
+    hudXpBeam: {
+        position: 'absolute',
+        top: 0,
+        bottom: 0,
+        width: 30,
+        backgroundColor: 'rgba(255,255,255,0.40)',
+    },
+    hudXpLabel: {
+        fontSize: 10,
+        fontFamily: FontFamily.title.extraBold,
+        minWidth: 28,
+        textAlign: 'right',
+    },
+
+    hudRoadmap: {
+        borderRadius: 14,
+        borderWidth: 1,
+        padding: 12,
+        gap: 10,
+    },
+    hudRoadmapTitle: {
+        fontSize: 9,
+        fontFamily: FontFamily.title.bold,
+        textTransform: 'uppercase',
+        letterSpacing: 1.2,
+    },
+    hudRoadmapTrack: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        justifyContent: 'center',
+    },
+    hudRoadmapNodeGroup: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        flex: 1,
+    },
+    hudRoadmapNodeCol: {
+        alignItems: 'center',
+        gap: 4,
+        width: 40,
+        zIndex: 2,
+    },
+    hudRoadmapNode: {
+        width: 24,
+        height: 24,
+        borderRadius: 12,
+        borderWidth: 2,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    hudRoadmapNodeDone: {
+        backgroundColor: Colors.primary,
+        borderColor: Colors.primary,
+    },
+    hudRoadmapCurrentNode: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: Colors.primary,
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: Colors.primary,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.5,
+        shadowRadius: 8,
+        elevation: 6,
+    },
+    hudRoadmapCurrentNodeInner: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: Colors.primary,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    hudRoadmapLabel: {
+        fontSize: 8,
+        fontFamily: FontFamily.title.bold,
+        textTransform: 'uppercase',
+        letterSpacing: 0.3,
+        textAlign: 'center',
+    },
+    hudRoadmapLine: {
+        height: 2,
+        flex: 1,
+        borderRadius: 1,
+        marginTop: 12,
+        marginHorizontal: -4,
+        zIndex: 1,
+    },
+
+    hudStatRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderWidth: 1,
+        borderRadius: 14,
+        paddingVertical: 10,
+        paddingHorizontal: 4,
+    },
+    hudStatItem: {
+        flex: 1,
+        alignItems: 'center',
+        gap: 3,
+    },
+    hudStatValueRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 5,
+    },
+    hudStatNumber: {
+        fontSize: 18,
+        fontFamily: FontFamily.title.extraBold,
+        lineHeight: 20,
+    },
+    hudStatLabel: {
+        fontSize: 8,
+        fontFamily: FontFamily.title.bold,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
+    },
+    hudStatDivider: {
+        width: 1,
+        height: 28,
+    },
+
+    hudMission: {
+        borderRadius: 14,
+        padding: 14,
+        gap: 6,
+    },
+    hudMissionHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    hudMissionTag: {
+        fontSize: 10,
+        fontFamily: FontFamily.title.extraBold,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+        color: Colors.primary,
+    },
+    hudMissionText: {
+        fontSize: 12,
+        lineHeight: 18,
+        fontFamily: FontFamily.body.medium,
+        color: '#D1D5DB',
+    },
+    hudMissionHighlight: {
+        color: Colors.primary,
+        fontFamily: FontFamily.title.bold,
     },
     menuLayer: {
         flex: 1,
@@ -565,8 +1050,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 10,
     },
-    menuItemDisabled: {
-    },
+    menuItemDisabled: {},
     menuIconShell: {
         width: 34,
         height: 34,
@@ -577,8 +1061,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    menuIconShellDisabled: {
-    },
+    menuIconShellDisabled: {},
     menuTextBlock: {
         flex: 1,
     },

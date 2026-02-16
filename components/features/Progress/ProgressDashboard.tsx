@@ -48,25 +48,98 @@ export function ProgressDashboard() {
                     </Text>
                 </View>
             </View>
+            <View style={styles.block}>
+                <View style={styles.card}>
+                    <View style={styles.consistencyHeader}>
+                        <View>
+                            <Text style={styles.sectionLabel}>Consistência</Text>
+                            <Text style={styles.sectionTitle}>Últimos 14 dias</Text>
+                        </View>
+                        <View style={styles.consistencyBadge}>
+                            <Ionicons name="flame" size={14} color="#111827" />
+                            <Text style={styles.consistencyBadgeText}>
+                                {consistency.filter(d => d.active).length}/14
+                            </Text>
+                        </View>
+                    </View>
+
+                    <View style={styles.consistencyGrid}>
+                        {[0, 1].map((row) => (
+                            <View key={row} style={styles.consistencyGridRow}>
+                                {consistency.slice(row * 7, row * 7 + 7).map((day) => (
+                                    <View key={day.key} style={styles.consistencyCell}>
+                                        <View style={[
+                                            styles.dayCellBox,
+                                            day.active ? styles.dayCellActive : styles.dayCellIdle,
+                                            day.isToday && styles.dayCellToday,
+                                        ]}>
+                                            {day.active && (
+                                                <Ionicons
+                                                    name="checkmark"
+                                                    size={12}
+                                                    color={day.isToday ? '#FDCB13' : '#111827'}
+                                                />
+                                            )}
+                                        </View>
+                                        <Text style={[
+                                            styles.dayCellLabel,
+                                            day.isToday && styles.dayCellLabelToday,
+                                        ]}>{day.label}</Text>
+                                    </View>
+                                ))}
+                            </View>
+                        ))}
+                    </View>
+
+                    <View style={styles.summaryCards}>
+                        <View style={styles.summaryCard}>
+                            <View style={styles.summaryCardIcon}>
+                                <Ionicons name="barbell" size={16} color={Colors.primary} />
+                            </View>
+                            <Text style={styles.summaryCardValue}>{performanceSummary.workoutsLast30Days}</Text>
+                            <Text style={styles.summaryCardLabel}>treinos</Text>
+                        </View>
+                        <View style={styles.summaryCard}>
+                            <View style={styles.summaryCardIcon}>
+                                <Ionicons name="time" size={16} color={Colors.primary} />
+                            </View>
+                            <Text style={styles.summaryCardValue}>{performanceSummary.avgDurationMinutes}<Text style={styles.summaryCardUnit}>min</Text></Text>
+                            <Text style={styles.summaryCardLabel}>duração média</Text>
+                        </View>
+                        <View style={styles.summaryCard}>
+                            <View style={styles.summaryCardIcon}>
+                                <Ionicons name="trending-up" size={16} color={Colors.primary} />
+                            </View>
+                            <Text style={styles.summaryCardValue}>{volumeDistribution.reduce((sum, item) => sum + parseFloat(item.volume), 0).toFixed(1)}<Text style={styles.summaryCardUnit}>t</Text></Text>
+                            <Text style={styles.summaryCardLabel}>volume total</Text>
+                        </View>
+                    </View>
+                </View>
+            </View>
 
             <View style={styles.block}>
                 <View style={styles.card}>
-                    <View style={styles.cardCenterHeader}>
-                        <Text style={styles.cardHeaderText}>Simetria & Foco</Text>
-                    </View>
+                    <Text style={styles.sectionLabel}>Equilíbrio Muscular</Text>
+                    <Text style={styles.sectionTitle}>Simetria & Foco</Text>
 
                     <View style={styles.radarWrapper}>
                         <RadarFocusChart data={radarData} />
                     </View>
 
                     <View style={styles.radarStatsRow}>
-                        <View style={styles.radarStat}>
-                            <Text style={styles.radarStatLabel}>Ponto Forte</Text>
-                            <Text style={styles.radarStatValue}>{strongest}</Text>
+                        <View style={styles.radarStatPill}>
+                            <Ionicons name="trophy" size={12} color={Colors.primary} />
+                            <View>
+                                <Text style={styles.radarStatPillLabel}>Ponto Forte</Text>
+                                <Text style={styles.radarStatPillValue}>{strongest}</Text>
+                            </View>
                         </View>
-                        <View style={styles.radarStat}>
-                            <Text style={styles.radarStatLabel}>Atenção</Text>
-                            <Text style={styles.radarStatValue}>{weakest}</Text>
+                        <View style={[styles.radarStatPill, styles.radarStatPillWeak]}>
+                            <Ionicons name="alert-circle" size={12} color="#6B7280" />
+                            <View>
+                                <Text style={styles.radarStatPillLabel}>Atenção</Text>
+                                <Text style={styles.radarStatPillValue}>{weakest}</Text>
+                            </View>
                         </View>
                     </View>
                 </View>
@@ -130,42 +203,6 @@ export function ProgressDashboard() {
                 </View>
             </View>
 
-            <View style={styles.block}>
-                <View style={styles.card}>
-                    <Text style={styles.sectionLabel}>Consistência</Text>
-                    <Text style={styles.sectionTitle}>Últimos 14 dias</Text>
-
-                    <View style={styles.consistencyRow}>
-                        {consistency.map((day) => (
-                            <View key={day.key} style={styles.dayItem}>
-                                <View style={[
-                                    styles.dayDot,
-                                    day.active ? styles.dayDotActive : styles.dayDotIdle,
-                                    day.isToday && styles.dayDotToday,
-                                ]} />
-                                <Text style={[styles.dayLabel, day.isToday && styles.dayLabelToday]}>{day.label}</Text>
-                            </View>
-                        ))}
-                    </View>
-
-                    <View style={styles.summaryGrid}>
-                        <View style={styles.summaryItem}>
-                            <Text style={styles.summaryKpi}>{performanceSummary.workoutsLast30Days}</Text>
-                            <Text style={styles.summaryLabel}>treinos / 30 dias</Text>
-                        </View>
-                        <View style={styles.summaryDivider} />
-                        <View style={styles.summaryItem}>
-                            <Text style={styles.summaryKpi}>{performanceSummary.avgDurationMinutes} min</Text>
-                            <Text style={styles.summaryLabel}>duração média</Text>
-                        </View>
-                        <View style={styles.summaryDivider} />
-                        <View style={styles.summaryItem}>
-                            <Text style={styles.summaryKpi}>{performanceSummary.avgRpe.toFixed(1)}</Text>
-                            <Text style={styles.summaryLabel}>RPE médio</Text>
-                        </View>
-                    </View>
-                </View>
-            </View>
 
             <View style={styles.block}>
                 <View style={styles.card}>
@@ -243,42 +280,36 @@ const styles = StyleSheet.create({
         shadowRadius: 8,
         elevation: 2,
     },
-    cardCenterHeader: {
-        alignItems: 'center',
-        marginTop: 2,
-    },
-    cardHeaderText: {
-        fontSize: 12,
-        fontFamily: FontFamily.title.extraBold,
-        color: '#111827',
-        textTransform: 'uppercase',
-        letterSpacing: 2,
-    },
     radarWrapper: {
-        marginTop: 6,
-        marginBottom: 6,
         alignItems: 'center',
         justifyContent: 'center',
     },
     radarStatsRow: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        paddingBottom: 4,
+        gap: 8,
     },
-    radarStat: {
+    radarStatPill: {
+        flex: 1,
+        flexDirection: 'row',
         alignItems: 'center',
+        gap: 8,
+        backgroundColor: '#F3F4F6',
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
     },
-    radarStatLabel: {
-        fontSize: 10,
+    radarStatPillWeak: {
+        backgroundColor: '#F3F4F6',
+    },
+    radarStatPillLabel: {
+        fontSize: 9,
         color: '#9CA3AF',
         fontFamily: FontFamily.title.bold,
         textTransform: 'uppercase',
-        marginBottom: 2,
     },
-    radarStatValue: {
-        fontSize: 14,
-        color: '#000000',
+    radarStatPillValue: {
+        fontSize: 13,
+        color: '#111827',
         fontFamily: FontFamily.title.extraBold,
     },
     groupSelector: {
@@ -398,67 +429,99 @@ const styles = StyleSheet.create({
         marginBottom: 14,
         letterSpacing: -0.5,
     },
-    consistencyRow: {
+    consistencyHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 16,
+        alignItems: 'flex-start',
     },
-    dayItem: {
+    consistencyBadge: {
+        flexDirection: 'row',
         alignItems: 'center',
+        gap: 4,
+        backgroundColor: Colors.primary,
+        borderRadius: 10,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+    },
+    consistencyBadgeText: {
+        fontSize: 13,
+        fontFamily: FontFamily.title.extraBold,
+        color: '#111827',
+    },
+    consistencyGrid: {
         gap: 6,
     },
-    dayDot: {
-        width: 14,
-        height: 14,
+    consistencyGridRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+    },
+    consistencyCell: {
+        flex: 1,
+        alignItems: 'center',
+        gap: 4,
+    },
+    dayCellBox: {
+        width: 26,
+        height: 26,
         borderRadius: 7,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
-    dayDotIdle: {
-        backgroundColor: '#E5E7EB',
-    },
-    dayDotActive: {
+    dayCellActive: {
         backgroundColor: Colors.primary,
     },
-    dayDotToday: {
-        borderWidth: 2,
-        borderColor: '#111111',
+    dayCellIdle: {
+        backgroundColor: '#F3F4F6',
     },
-    dayLabel: {
+    dayCellToday: {
+        borderWidth: 2,
+        borderColor: '#111827',
+    },
+    dayCellLabel: {
         fontSize: 9,
         color: '#9CA3AF',
         fontFamily: FontFamily.title.bold,
         textTransform: 'uppercase',
     },
-    dayLabelToday: {
-        color: '#111111',
+    dayCellLabelToday: {
+        color: '#111827',
     },
-    summaryGrid: {
+    summaryCards: {
         flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
+        gap: 8,
         borderTopWidth: 1,
         borderTopColor: '#F3F4F6',
         paddingTop: 14,
     },
-    summaryItem: {
+    summaryCard: {
         flex: 1,
         alignItems: 'center',
+        gap: 4,
+        backgroundColor: '#F9FAFB',
+        borderRadius: 14,
+        paddingVertical: 12,
     },
-    summaryKpi: {
-        fontSize: 18,
-        color: '#111111',
-        fontFamily: FontFamily.title.extraBold,
+    summaryCardIcon: {
+        alignItems: 'center',
+        justifyContent: 'center',
         marginBottom: 2,
     },
-    summaryLabel: {
-        fontSize: 10,
+    summaryCardValue: {
+        fontSize: 18,
+        color: '#111827',
+        fontFamily: FontFamily.title.extraBold,
+        lineHeight: 20,
+    },
+    summaryCardUnit: {
+        fontSize: 12,
+        color: '#6B7280',
+        fontFamily: FontFamily.body.medium,
+    },
+    summaryCardLabel: {
+        fontSize: 9,
         color: '#9CA3AF',
         fontFamily: FontFamily.body.medium,
         textTransform: 'lowercase',
-    },
-    summaryDivider: {
-        width: 1,
-        height: 34,
-        backgroundColor: '#F3F4F6',
     },
     distributionList: {
         gap: 10,

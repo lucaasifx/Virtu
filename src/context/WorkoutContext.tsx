@@ -6,6 +6,7 @@ import { getExerciseById } from '../constants/exercises';
 import { useAuth } from './AuthContext';
 import {
     createWorkoutRoutine,
+    deleteWorkoutRoutine,
     fetchWorkoutRoutines,
     updateWorkoutRoutine,
     WorkoutRoutineRecord,
@@ -50,8 +51,10 @@ interface WorkoutContextData {
     routines: WorkoutRoutine[];
     isLoadingRoutines: boolean;
     isSavingRoutine: boolean;
+    isDeletingRoutine: boolean;
     lastRoutineError: string | null;
     createRoutineFromSelection: () => Promise<WorkoutRoutine | null>;
+    deleteRoutineById: (routineId: string) => Promise<boolean>;
     pendingStartRoutine: WorkoutRoutine | null;
     queueRoutineStart: (routineId: string) => void;
     clearPendingStartRoutine: () => void;
@@ -120,12 +123,14 @@ function isGroupValue(value: string): value is MuscleGroup {
 
 export function WorkoutProvider({ children }: { children: ReactNode }) {
     const { user } = useAuth();
+    const userId = user?.id ?? null;
     const [selectedGroups, setSelectedGroupsState] = useState<MuscleGroup[]>([]);
     const [selections, setSelections] = useState<Partial<Record<MuscleGroup, string[]>>>({});
     const [workoutCategory, setWorkoutCategory] = useState('Hipertrofia');
     const [routines, setRoutines] = useState<WorkoutRoutine[]>([]);
     const [isLoadingRoutines, setIsLoadingRoutines] = useState(false);
     const [isSavingRoutine, setIsSavingRoutine] = useState(false);
+    const [isDeletingRoutine, setIsDeletingRoutine] = useState(false);
     const [lastRoutineError, setLastRoutineError] = useState<string | null>(null);
     const [pendingStartRoutine, setPendingStartRoutine] = useState<WorkoutRoutine | null>(null);
     const [editingRoutineId, setEditingRoutineId] = useState<string | null>(null);
@@ -134,7 +139,7 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
         let active = true;
 
         const load = async () => {
-            if (!user) {
+            if (!userId) {
                 if (active) {
                     setRoutines([]);
                     setPendingStartRoutine(null);
@@ -145,7 +150,7 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
 
             setIsLoadingRoutines(true);
             try {
-                const fetched = await fetchWorkoutRoutines(user.id);
+                const fetched = await fetchWorkoutRoutines(userId);
                 if (active) {
                     setRoutines(fetched.map(buildRoutineViewModel));
                 }
@@ -165,7 +170,7 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
         return () => {
             active = false;
         };
-    }, [user]);
+    }, [userId]);
 
     const setSelectedGroups = useCallback((groups: MuscleGroup[]) => {
         setSelectedGroupsState(groups);
@@ -207,7 +212,7 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
 
     const createRoutineFromSelection = useCallback(async () => {
         setLastRoutineError(null);
-        if (!user || selectedGroups.length === 0) {
+        if (!userId || selectedGroups.length === 0) {
             setLastRoutineError('Usuário não autenticado ou sem grupos selecionados.');
             return null;
         }
@@ -242,12 +247,12 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
             let saved: WorkoutRoutineRecord;
 
             if (editingRoutineId) {
-                saved = await updateWorkoutRoutine(editingRoutineId, user.id, payload);
+                saved = await updateWorkoutRoutine(editingRoutineId, userId, payload);
                 const mapped = buildRoutineViewModel(saved);
                 setRoutines((prev) => prev.map((routine) => routine.id === mapped.id ? mapped : routine));
                 setPendingStartRoutine((prev) => prev?.id === mapped.id ? mapped : prev);
             } else {
-                saved = await createWorkoutRoutine(user.id, payload);
+                saved = await createWorkoutRoutine(userId, payload);
                 const mapped = buildRoutineViewModel(saved);
                 setRoutines((prev) => [mapped, ...prev]);
             }
@@ -263,11 +268,42 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
         } finally {
             setIsSavingRoutine(false);
         }
-    }, [editingRoutineId, resetWorkout, selections, selectedGroups, user, workoutCategory]);
+    }, [editingRoutineId, resetWorkout, selections, selectedGroups, userId, workoutCategory]);
 
     const queueRoutineStart = useCallback((routineId: string) => {
         setPendingStartRoutine(() => routines.find((routine) => routine.id === routineId) ?? null);
     }, [routines]);
+
+    const deleteRoutineById = useCallback(async (routineId: string) => {
+        setLastRoutineError(null);
+        if (!userId) {
+            setLastRoutineError('Usuario nao autenticado.');
+            return false;
+        }
+
+        setIsDeletingRoutine(true);
+        try {
+            await deleteWorkoutRoutine(routineId, userId);
+            setRoutines((prev) => prev.filter((routine) => routine.id !== routineId));
+            setPendingStartRoutine((prev) => prev?.id === routineId ? null : prev);
+            if (editingRoutineId === routineId) {
+                resetWorkout();
+            }
+            return true;
+        } catch (error) {
+            const rawMessage = error instanceof Error ? error.message : 'Falha ao excluir rotina.';
+            const isTimeoutError = rawMessage.includes('Tempo de resposta excedido');
+            const isLegacyTimeoutCopy = rawMessage.includes('salvar/carregar rotina');
+            const message = isTimeoutError || isLegacyTimeoutCopy
+                ? 'Tempo de resposta excedido ao excluir rotina.'
+                : rawMessage;
+            setLastRoutineError(message);
+            console.error('[WorkoutRoutine] delete error:', message);
+            return false;
+        } finally {
+            setIsDeletingRoutine(false);
+        }
+    }, [editingRoutineId, resetWorkout, userId]);
 
     const clearPendingStartRoutine = useCallback(() => {
         setPendingStartRoutine(null);
@@ -308,8 +344,10 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
         routines,
         isLoadingRoutines,
         isSavingRoutine,
+        isDeletingRoutine,
         lastRoutineError,
         createRoutineFromSelection,
+        deleteRoutineById,
         pendingStartRoutine,
         queueRoutineStart,
         clearPendingStartRoutine,
@@ -328,8 +366,10 @@ export function WorkoutProvider({ children }: { children: ReactNode }) {
         routines,
         isLoadingRoutines,
         isSavingRoutine,
+        isDeletingRoutine,
         lastRoutineError,
         createRoutineFromSelection,
+        deleteRoutineById,
         pendingStartRoutine,
         queueRoutineStart,
         clearPendingStartRoutine,

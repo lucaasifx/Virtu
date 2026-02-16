@@ -5,6 +5,7 @@ import {
     StyleSheet,
     FlatList,
     Pressable,
+    ImageSourcePropType,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Entypo, Ionicons } from '@expo/vector-icons';
@@ -19,134 +20,173 @@ import Animated, { FadeInDown, ZoomIn } from 'react-native-reanimated';
 import { useWorkoutCreation } from '@/src/context/WorkoutContext';
 
 const BASE_CATEGORIES = ['Todos', 'Hipertrofia', 'Força', 'Cardio', 'Funcional'];
+const CARD_ESTIMATED_HEIGHT = 308;
+
+type WorkoutCardItem = {
+    id: string;
+    title: string;
+    category: string;
+    duration: string;
+    exercises: number;
+    muscles: string;
+    image: ImageSourcePropType | string;
+};
 
 export default function Workout() {
     const insets = useSafeAreaInsets();
     const { state, xpProgress, levelInfo } = useGamification();
     const { routines, queueRoutineStart, startRoutineEdit } = useWorkoutCreation();
     const [activeCategory, setActiveCategory] = useState('Todos');
+
+    const headerStats = React.useMemo(() => ({
+        level: levelInfo?.level || 1,
+        streak: state?.streak || 0,
+        xp: xpProgress?.current || 0,
+        maxXp: xpProgress?.max || 100
+    }), [levelInfo?.level, state?.streak, xpProgress?.current, xpProgress?.max]);
+
+    const workoutCardData = React.useMemo<WorkoutCardItem[]>(() => routines.map((workout) => ({
+        id: workout.id,
+        title: workout.title,
+        category: workout.category,
+        duration: `${workout.estimatedMinutes} min`,
+        exercises: workout.exerciseCount,
+        muscles: workout.musclesLabel,
+        image: workout.image,
+    })), [routines]);
+
     const categories = React.useMemo(() => {
         const dynamicCategories = Array.from(new Set(routines.map(routine => routine.category)));
         return Array.from(new Set([...BASE_CATEGORIES, ...dynamicCategories]));
     }, [routines]);
 
-    const filteredWorkouts = activeCategory === 'Todos'
-        ? routines
-        : routines.filter(w => w.category === activeCategory);
+    const filteredWorkouts = React.useMemo(() => (
+        activeCategory === 'Todos'
+            ? workoutCardData
+            : workoutCardData.filter(w => w.category === activeCategory)
+    ), [activeCategory, workoutCardData]);
+
     const isEmptyCategory = filteredWorkouts.length === 0;
 
-    const handleCreateRoutine = () => {
+    const handleCreateRoutine = React.useCallback(() => {
         router.push('/workout/Selection');
-    };
+    }, []);
 
-    const handlePlayRoutine = (routineId: string) => {
+    const handlePlayRoutine = React.useCallback((routineId: string) => {
         queueRoutineStart(routineId);
         router.push({ pathname: '/workout/FinishSelection', params: { routineId } });
-    };
+    }, [queueRoutineStart]);
 
-    const handleEditRoutine = (routineId: string) => {
+    const handleEditRoutine = React.useCallback((routineId: string) => {
         const loaded = startRoutineEdit(routineId);
         if (!loaded) {
             return;
         }
         router.push({ pathname: '/workout/Selection', params: { mode: 'editRoutine', routineId } });
-    };
+    }, [startRoutineEdit]);
+
+    const keyExtractor = React.useCallback((item: WorkoutCardItem) => item.id, []);
+
+    const renderItem = React.useCallback(({ item: workout }: { item: WorkoutCardItem }) => (
+        <View style={styles.cardItem}>
+            <WorkoutCard
+                workout={workout}
+                onPlay={() => handlePlayRoutine(workout.id)}
+                onEdit={() => handleEditRoutine(workout.id)}
+            />
+        </View>
+    ), [handleEditRoutine, handlePlayRoutine]);
+
+    const listHeaderComponent = React.useMemo(() => (
+        <>
+            <WorkoutHeader />
+            <CategorySelector
+                categories={categories}
+                activeCategory={activeCategory}
+                onSelectCategory={setActiveCategory}
+            />
+        </>
+    ), [activeCategory, categories]);
+
+    const listFooterComponent = React.useMemo(() => (
+        <Pressable
+            onPress={handleCreateRoutine}
+            style={styles.createButton}
+        >
+            {({ pressed }) => (
+                <View style={[
+                    styles.createButtonInner,
+                    pressed && { borderColor: '#000' }
+                ]}>
+                    <View style={[
+                        styles.plusIconCircle,
+                        pressed && { backgroundColor: '#FDCB13' }
+                    ]}>
+                        <Entypo
+                            name="plus"
+                            size={24}
+                            color={pressed ? '#000' : '#9CA3AF'}
+                        />
+                    </View>
+                    <Text style={[
+                        styles.createButtonText,
+                        pressed && { color: '#000' }
+                    ]}>
+                        Criar Nova Rotina
+                    </Text>
+                </View>
+            )}
+        </Pressable>
+    ), [handleCreateRoutine]);
+
+    const listEmptyComponent = React.useMemo(() => (isEmptyCategory ? (
+        <Animated.View entering={FadeInDown.duration(420)} style={styles.emptyStateCard}>
+            <Animated.View entering={ZoomIn.duration(420)} style={styles.emptyIconWrapper}>
+                <View style={[styles.bracket, styles.bracketTopLeft]} />
+                <View style={[styles.bracket, styles.bracketBottomRight]} />
+
+                <View style={styles.emptyIconCircle}>
+                    <Ionicons name="barbell-outline" size={40} color={Colors.primary} />
+                </View>
+
+                <View style={styles.emptyBadge}>
+                    <Ionicons name="sparkles" size={14} color="#111827" />
+                </View>
+            </Animated.View>
+
+            <Text style={styles.emptyTitle}>SEM TREINOS NESSA CATEGORIA</Text>
+            <View style={styles.emptyDivider} />
+            <Text style={styles.emptyDescription}>
+                Monte uma rotina nova e preencha essa aba com progresso real.
+            </Text>
+        </Animated.View>
+    ) : null), [isEmptyCategory]);
+
+    const getItemLayout = React.useCallback((_: ArrayLike<unknown> | null | undefined, index: number) => ({
+        length: CARD_ESTIMATED_HEIGHT,
+        offset: CARD_ESTIMATED_HEIGHT * index,
+        index,
+    }), []);
 
     return (
         <View style={styles.container}>
-            <Header
-                stats={{
-                    level: levelInfo?.level || 1,
-                    streak: state?.streak || 0,
-                    xp: xpProgress?.current || 0,
-                    maxXp: xpProgress?.max || 100
-                }}
-            />
+            <Header stats={headerStats} />
 
             <FlatList
                 data={filteredWorkouts}
-                keyExtractor={(item) => item.id}
+                keyExtractor={keyExtractor}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={[styles.listContent, { paddingTop: insets.top + 140 }]}
-                ListHeaderComponent={(
-                    <>
-                        <WorkoutHeader />
-                        <CategorySelector
-                            categories={categories}
-                            activeCategory={activeCategory}
-                            onSelectCategory={setActiveCategory}
-                        />
-                    </>
-                )}
-                renderItem={({ item: workout }) => (
-                    <View style={styles.cardItem}>
-                        <WorkoutCard
-                            workout={{
-                                id: workout.id,
-                                title: workout.title,
-                                category: workout.category,
-                                duration: `${workout.estimatedMinutes} min`,
-                                exercises: workout.exerciseCount,
-                                muscles: workout.musclesLabel,
-                                image: workout.image,
-                            }}
-                            onPlay={() => handlePlayRoutine(workout.id)}
-                            onEdit={() => handleEditRoutine(workout.id)}
-                        />
-                    </View>
-                )}
-                ListEmptyComponent={isEmptyCategory ? (
-                    <Animated.View entering={FadeInDown.duration(420)} style={styles.emptyStateCard}>
-                        <Animated.View entering={ZoomIn.duration(420)} style={styles.emptyIconWrapper}>
-                            <View style={[styles.bracket, styles.bracketTopLeft]} />
-                            <View style={[styles.bracket, styles.bracketBottomRight]} />
-
-                            <View style={styles.emptyIconCircle}>
-                                <Ionicons name="barbell-outline" size={40} color={Colors.primary} />
-                            </View>
-
-                            <View style={styles.emptyBadge}>
-                                <Ionicons name="sparkles" size={14} color="#111827" />
-                            </View>
-                        </Animated.View>
-
-                        <Text style={styles.emptyTitle}>SEM TREINOS NESSA CATEGORIA</Text>
-                        <View style={styles.emptyDivider} />
-                        <Text style={styles.emptyDescription}>
-                            Monte uma rotina nova e preencha essa aba com progresso real.
-                        </Text>
-                    </Animated.View>
-                ) : null}
-                ListFooterComponent={(
-                    <Pressable
-                        onPress={handleCreateRoutine}
-                        style={styles.createButton}
-                    >
-                        {({ pressed }) => (
-                            <View style={[
-                                styles.createButtonInner,
-                                pressed && { borderColor: '#000' }
-                            ]}>
-                                <View style={[
-                                    styles.plusIconCircle,
-                                    pressed && { backgroundColor: '#FDCB13' }
-                                ]}>
-                                    <Entypo
-                                        name="plus"
-                                        size={24}
-                                        color={pressed ? '#000' : '#9CA3AF'}
-                                    />
-                                </View>
-                                <Text style={[
-                                    styles.createButtonText,
-                                    pressed && { color: '#000' }
-                                ]}>
-                                    Criar Nova Rotina
-                                </Text>
-                            </View>
-                        )}
-                    </Pressable>
-                )}
+                ListHeaderComponent={listHeaderComponent}
+                renderItem={renderItem}
+                ListEmptyComponent={listEmptyComponent}
+                ListFooterComponent={listFooterComponent}
+                removeClippedSubviews
+                maxToRenderPerBatch={5}
+                windowSize={7}
+                initialNumToRender={4}
+                updateCellsBatchingPeriod={32}
+                getItemLayout={getItemLayout}
             />
         </View>
     );

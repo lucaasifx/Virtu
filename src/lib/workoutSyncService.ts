@@ -6,6 +6,11 @@ import { Json } from './database.types';
 const WORKOUT_CACHE_KEY = '@virtu_workouts_cache';
 const CACHE_LAST_SYNC_KEY = '@virtu_last_workout_sync';
 
+async function getUserIdFromSession(): Promise<string | null> {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.user?.id ?? null;
+}
+
 // Types for JSONB storage
 export interface WorkoutExerciseData {
     exerciseId: string;
@@ -78,19 +83,18 @@ function parseExercisesData(data: Json | null): WorkoutExerciseData[] {
 export async function syncWorkoutToSupabase(
     session: WorkoutSession,
     durationSeconds: number,
-    totalVolume: number
+    totalVolume: number,
+    userId?: string
 ): Promise<WorkoutSyncResult> {
     try {
-        // Get current user
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-        if (userError || !user) {
+        const resolvedUserId = userId ?? await getUserIdFromSession();
+        if (!resolvedUserId) {
             console.log('[WorkoutSync] No user logged in, saving to local cache only');
             await saveWorkoutToCache(session, durationSeconds, totalVolume);
             return { success: false, error: 'User not authenticated' };
         }
 
-        console.log('[WorkoutSync] Syncing workout for user:', user.id);
+        console.log('[WorkoutSync] Syncing workout for user:', resolvedUserId);
 
         // Prepare exercises data as JSONB
         const exercisesData: WorkoutExerciseData[] = [];
@@ -118,7 +122,7 @@ export async function syncWorkoutToSupabase(
         const { data: workout, error: workoutError } = await supabase
             .from('workouts')
             .insert({
-                user_id: user.id,
+                user_id: resolvedUserId,
                 started_at: session.startTime.toISOString(),
                 ended_at: new Date().toISOString(),
                 duration_seconds: durationSeconds,
@@ -238,8 +242,22 @@ export async function getCachedWorkouts(): Promise<CachedWorkout[]> {
  */
 export async function syncWorkoutsFromSupabase(daysToSync: number = 30): Promise<CachedWorkout[]> {
     try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return await getCachedWorkouts();
+        const userId = await getUserIdFromSession();
+        return await syncWorkoutsFromSupabaseForUser(userId, daysToSync);
+    } catch (error) {
+        console.error('[WorkoutSync] Error syncing from Supabase:', error);
+        return await getCachedWorkouts();
+    }
+}
+
+export async function syncWorkoutsFromSupabaseForUser(
+    userId: string | null,
+    daysToSync: number = 30
+): Promise<CachedWorkout[]> {
+    try {
+        if (!userId) {
+            return await getCachedWorkouts();
+        }
 
         // Calculate date limit
         const dateLimit = new Date();
@@ -249,7 +267,7 @@ export async function syncWorkoutsFromSupabase(daysToSync: number = 30): Promise
         const { data: workouts, error } = await supabase
             .from('workouts')
             .select('*')
-            .eq('user_id', user.id)
+            .eq('user_id', userId)
             .gte('started_at', dateLimitStr) // Only workouts from last X days
             .order('started_at', { ascending: false });
 
@@ -312,19 +330,19 @@ export async function syncWorkoutsFromSupabase(daysToSync: number = 30): Promise
 export async function syncGamificationToSupabase(
     totalXP: number,
     currentLevel: number,
-    streak: number
+    streak: number,
+    userId?: string
 ): Promise<{ success: boolean; error?: string }> {
     try {
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-        if (userError || !user) {
+        const resolvedUserId = userId ?? await getUserIdFromSession();
+        if (!resolvedUserId) {
             return { success: false, error: 'User not authenticated' };
         }
 
         const { error } = await supabase
             .from('gamification')
             .upsert({
-                user_id: user.id,
+                user_id: resolvedUserId,
                 total_xp: totalXP,
                 current_level: currentLevel,
                 streak: streak,

@@ -13,6 +13,7 @@ import Animated, {
 import { Colors } from '@/src/constants/theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { LevelInfo } from '@/src/types/gamification';
+import { getUserClass } from '@/src/constants/classes';
 
 interface LevelUpModalProps {
     visible: boolean;
@@ -23,6 +24,7 @@ interface LevelUpModalProps {
 export function LevelUpModal({ visible, levelInfo, onClose }: LevelUpModalProps) {
     const starScale = useSharedValue(0);
     const badgeRotate = useSharedValue(0);
+    const userClass = getUserClass(levelInfo.level);
 
     useEffect(() => {
         if (visible) {
@@ -85,7 +87,7 @@ export function LevelUpModal({ visible, levelInfo, onClose }: LevelUpModalProps)
                     </Animated.View>
 
                     <Animated.Text entering={FadeIn.delay(500)} style={styles.titleText}>
-                        {levelInfo.title}
+                        {userClass.title}
                     </Animated.Text>
 
                     <Animated.Text entering={FadeIn.delay(600)} style={styles.subtitleText}>

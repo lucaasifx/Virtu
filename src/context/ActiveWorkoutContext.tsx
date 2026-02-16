@@ -6,6 +6,7 @@ import { activeWorkoutReducer } from './ActiveWorkoutReducer';
 import { NotificationService } from '../services/NotificationService';
 import { getExerciseById } from '../constants/exercises';
 import { createWorkoutSession, calculateWorkoutSummary } from './ActiveWorkoutSession';
+import { useAuth } from './AuthContext';
 
 interface ActiveWorkoutContextData {
     session: WorkoutSession | null;
@@ -39,6 +40,8 @@ interface ActiveWorkoutProviderProps {
 }
 
 export function ActiveWorkoutProvider({ children, onWorkoutEnd }: ActiveWorkoutProviderProps) {
+    const { user } = useAuth();
+    const userId = user?.id ?? null;
     const [session, setSession] = useState<WorkoutSession | null>(null);
     const [activeExerciseIndex, setActiveExerciseIndex] = useState(0);
     const [timerSeconds, setTimerSeconds] = useState(0);
@@ -171,7 +174,7 @@ export function ActiveWorkoutProvider({ children, onWorkoutEnd }: ActiveWorkoutP
 
         // Sync to Supabase in BACKGROUND (non-blocking)
         import('@/src/lib/workoutSyncService').then(({ syncWorkoutToSupabase }) => {
-            syncWorkoutToSupabase(currentSession, duration, totalVolume)
+            syncWorkoutToSupabase(currentSession, duration, totalVolume, userId ?? undefined)
                 .then(result => console.log('[Workout] Background sync:', result.success ? '✅' : '❌', result.error || ''))
                 .catch(e => console.error('[Workout] Background sync error:', e));
         });
@@ -191,7 +194,7 @@ export function ActiveWorkoutProvider({ children, onWorkoutEnd }: ActiveWorkoutP
                 date: endTime.toISOString(),
             }
         });
-    }, [onWorkoutEnd]);
+    }, [onWorkoutEnd, userId]);
 
     const nextExercise = useCallback(() => {
         const currentSession = sessionRef.current;

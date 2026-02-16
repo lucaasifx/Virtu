@@ -60,7 +60,6 @@ const RADAR_GROUPS: { label: string; groups: MuscleGroup[] }[] = [
     { label: 'Pernas', groups: [MuscleGroup.LEGS] },
     { label: 'Ombros', groups: [MuscleGroup.SHOULDERS] },
     { label: 'Braços', groups: [MuscleGroup.BICEPS, MuscleGroup.TRICEPS] },
-    { label: 'Core', groups: [MuscleGroup.ABS] },
 ];
 
 const SELECTOR_GROUPS: ProgressGroupId[] = ['Peitoral', 'Costas', 'Pernas', 'Ombros'];

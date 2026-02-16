@@ -21,7 +21,7 @@ interface WorkoutCardProps {
     onEdit?: () => void;
 }
 
-export function WorkoutCard({ workout, onPress, onPlay, onEdit }: WorkoutCardProps) {
+function WorkoutCardComponent({ workout, onPress, onPlay, onEdit }: WorkoutCardProps) {
     return (
         <TouchableOpacity
             activeOpacity={0.95}
@@ -80,6 +80,8 @@ export function WorkoutCard({ workout, onPress, onPlay, onEdit }: WorkoutCardPro
         </TouchableOpacity>
     );
 }
+
+export const WorkoutCard = React.memo(WorkoutCardComponent);
 
 const styles = StyleSheet.create({
     workoutCard: {

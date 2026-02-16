@@ -42,7 +42,7 @@ export function RadarFocusChart({ data }: RadarFocusChartProps) {
 
         const cx = size / 2;
         const cy = size / 2;
-        const radius = size * 0.3;
+        const radius = size * 0.36;
         const levels = 5;
 
         const axisPoints = data.map((_, index) => toPoint(cx, cy, radius, index, data.length));

@@ -24,6 +24,8 @@ export interface WorkoutRoutinePersistInput {
 
 type WorkoutRoutineRow = Database['public']['Tables']['workout_routines']['Row'];
 const ROUTINE_REQUEST_TIMEOUT_MS = 12000;
+const ROUTINE_DELETE_TIMEOUT_MS = 20000;
+const ROUTINE_DELETE_VERIFY_TIMEOUT_MS = 8000;
 
 const routineSchema = z.object({
     id: z.string().uuid(),
@@ -67,12 +69,16 @@ function toRecord(row: WorkoutRoutineRow): WorkoutRoutineRecord | null {
     };
 }
 
-async function withTimeout<T>(promiseLike: PromiseLike<T>, timeoutMs: number): Promise<T> {
+async function withTimeout<T>(
+    promiseLike: PromiseLike<T>,
+    timeoutMs: number,
+    operation: string
+): Promise<T> {
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
     const timeoutPromise = new Promise<T>((_, reject) => {
         timeoutId = setTimeout(() => {
-            reject(new Error('Tempo de resposta excedido ao salvar/carregar rotina.'));
+            reject(new Error(`Tempo de resposta excedido ao ${operation}.`));
         }, timeoutMs);
     });
 
@@ -92,7 +98,8 @@ export async function fetchWorkoutRoutines(userId: string): Promise<WorkoutRouti
             .select('*')
             .eq('user_id', userId)
             .order('updated_at', { ascending: false }),
-        ROUTINE_REQUEST_TIMEOUT_MS
+        ROUTINE_REQUEST_TIMEOUT_MS,
+        'carregar rotinas'
     );
 
     if (error) {
@@ -123,7 +130,8 @@ export async function createWorkoutRoutine(
             .insert(payload)
             .select('*')
             .single(),
-        ROUTINE_REQUEST_TIMEOUT_MS
+        ROUTINE_REQUEST_TIMEOUT_MS,
+        'salvar rotina'
     );
 
     if (error) {
@@ -160,7 +168,8 @@ export async function updateWorkoutRoutine(
             .eq('user_id', userId)
             .select('*')
             .single(),
-        ROUTINE_REQUEST_TIMEOUT_MS
+        ROUTINE_REQUEST_TIMEOUT_MS,
+        'salvar rotina'
     );
 
     if (error) {
@@ -173,4 +182,51 @@ export async function updateWorkoutRoutine(
     }
 
     return mapped;
+}
+
+export async function deleteWorkoutRoutine(
+    routineId: string,
+    userId: string
+): Promise<void> {
+    try {
+        const { error } = await withTimeout(
+            supabase
+                .from('workout_routines')
+                .delete()
+                .eq('id', routineId)
+                .eq('user_id', userId),
+            ROUTINE_DELETE_TIMEOUT_MS,
+            'excluir rotina'
+        );
+
+        if (error) {
+            throw new Error(error.message);
+        }
+    } catch (error) {
+        const isTimeout = error instanceof Error && error.message.includes('Tempo de resposta excedido');
+        if (!isTimeout) {
+            throw error instanceof Error ? error : new Error('Falha ao excluir rotina.');
+        }
+
+        const { data, error: verifyError } = await withTimeout(
+            supabase
+                .from('workout_routines')
+                .select('id')
+                .eq('id', routineId)
+                .eq('user_id', userId)
+                .maybeSingle(),
+            ROUTINE_DELETE_VERIFY_TIMEOUT_MS,
+            'verificar exclusao da rotina'
+        );
+
+        if (verifyError) {
+            throw new Error(verifyError.message);
+        }
+
+        if (data === null) {
+            return;
+        }
+
+        throw error;
+    }
 }

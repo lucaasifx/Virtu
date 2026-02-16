@@ -10,7 +10,6 @@ import { useActiveWorkout } from '@/src/context/ActiveWorkoutContext';
 import { EXERCISES_BY_GROUP } from '@/src/constants/exercises';
 import { MuscleGroup } from '@/src/types/workout';
 import WorkoutActionButton from '@/components/features/Workout/WorkoutActionButton';
-
 import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 
 export default function ExerciseSelectionScreen() {
@@ -82,8 +81,13 @@ export default function ExerciseSelectionScreen() {
     const filteredExercises = exercises.filter(ex =>
         ex.name.toLowerCase().includes(search.toLowerCase())
     );
+    const isActionDisabled = ((!isWorkoutEditMode && selectedIds.length === 0) || isSavingRoutine);
 
     const handleNext = async () => {
+        if (isActionDisabled) {
+            return;
+        }
+
         if (isWorkoutEditMode) {
             router.back();
             return;
@@ -103,7 +107,7 @@ export default function ExerciseSelectionScreen() {
             if (created) {
                 router.replace('/(tabs)/Workout');
             } else {
-                Alert.alert('Não foi possível salvar', lastRoutineError ?? 'Erro desconhecido ao salvar a rotina.');
+                Alert.alert('Nao foi possivel salvar', lastRoutineError ?? 'Erro desconhecido ao salvar a rotina.');
             }
         }
     };
@@ -113,9 +117,9 @@ export default function ExerciseSelectionScreen() {
         BACK: 'Costas',
         LEGS: 'Pernas',
         SHOULDERS: 'Ombros',
-        BICEPS: 'Bíceps',
-        TRICEPS: 'Tríceps',
-        ABS: 'Abdômen',
+        BICEPS: 'Biceps',
+        TRICEPS: 'Triceps',
+        ABS: 'Abdomen',
         CARDIO: 'Cardio',
         FULL_BODY: 'Full Body',
         OTHER: 'Outros'
@@ -124,9 +128,11 @@ export default function ExerciseSelectionScreen() {
     const title = groupNameMap[currentGroup] || currentGroup;
     const buttonTitle = isWorkoutEditMode
         ? "VOLTAR AO TREINO"
-        : (groupIndex === selectedGroups.length - 1
-            ? (isRoutineEditMode ? "SALVAR ALTERAÇÕES" : "SALVAR ROTINA")
-            : "AVANÇAR");
+        : isSavingRoutine
+            ? "SALVANDO..."
+            : (groupIndex === selectedGroups.length - 1
+                ? (isRoutineEditMode ? "SALVAR ALTERACOES" : "SALVAR ROTINA")
+                : "AVANCAR");
 
     return (
         <View style={styles.container}>
@@ -138,8 +144,8 @@ export default function ExerciseSelectionScreen() {
                     listHeaderComponent={
                         <SelectionHeader
                             title={title}
-                            subtitle={isWorkoutEditMode ? "Editando treino atual" : `Selecione os exercícios de ${title.toLowerCase()}`}
-                            placeholder="Buscar exercício..."
+                            subtitle={isWorkoutEditMode ? "Editando treino atual" : `Selecione os exercicios de ${title.toLowerCase()}`}
+                            placeholder="Buscar exercicio..."
                             search={search}
                             onSearchChange={setSearch}
                         />
@@ -150,14 +156,14 @@ export default function ExerciseSelectionScreen() {
                     <WorkoutActionButton
                         title={buttonTitle}
                         onPress={handleNext}
-                        disabled={(!isWorkoutEditMode && selectedIds.length === 0) || isSavingRoutine}
+                        disabled={isActionDisabled}
                     />
                 </View>
 
                 <ConfirmationModal
                     visible={showConfirmModal}
-                    title="Remover exercício?"
-                    message="Este exercício possui séries registradas que serão perdidas. Deseja continuar?"
+                    title="Remover exercicio?"
+                    message="Este exercicio possui series registradas que serao perdidas. Deseja continuar?"
                     confirmText="Remover"
                     cancelText="Cancelar"
                     onClose={() => {

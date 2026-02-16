@@ -1,5 +1,5 @@
 import React from "react";
-import { View, StyleSheet, FlatList, TouchableOpacity, Text } from "react-native";
+import { View, StyleSheet, FlatList, TouchableOpacity, Text, Alert } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { Feather } from "@expo/vector-icons";
@@ -10,13 +10,15 @@ import { GoalSelector } from "@/components/features/Workout/GoalSelector";
 import { useWorkoutCreation } from "@/src/context/WorkoutContext";
 import { MUSCLE_GROUPS } from "@/src/constants/muscleGroups";
 import WorkoutActionButton from "@/components/features/Workout/WorkoutActionButton";
+import { ConfirmationModal } from "@/components/ui/ConfirmationModal";
 
-const FORM_CATEGORIES = ['Hipertrofia', 'Força', 'Cardio', 'Funcional'];
+const FORM_CATEGORIES = ['Hipertrofia', 'Forca', 'Cardio', 'Funcional'];
 
 export default function SelectionScreen() {
     const insets = useSafeAreaInsets();
     const params = useLocalSearchParams<{ mode?: string; routineId?: string }>();
     const isRoutineEditMode = params.mode === 'editRoutine';
+    const [showDeleteModal, setShowDeleteModal] = React.useState(false);
     const {
         selectedGroups,
         setSelectedGroups,
@@ -24,6 +26,9 @@ export default function SelectionScreen() {
         workoutCategory,
         setWorkoutCategory,
         startRoutineEdit,
+        deleteRoutineById,
+        isDeletingRoutine,
+        lastRoutineError,
     } = useWorkoutCreation();
 
     React.useEffect(() => {
@@ -71,6 +76,23 @@ export default function SelectionScreen() {
         router.back();
     };
 
+    const handleDeleteRoutine = async () => {
+        if (!params.routineId) {
+            setShowDeleteModal(false);
+            return;
+        }
+
+        const removed = await deleteRoutineById(params.routineId);
+        setShowDeleteModal(false);
+
+        if (removed) {
+            router.replace('/(tabs)/Workout');
+            return;
+        }
+
+        Alert.alert('Nao foi possivel excluir', lastRoutineError ?? 'Erro desconhecido ao excluir a rotina.');
+    };
+
     return (
         <View style={styles.container}>
             <Stack.Screen options={{ headerShown: false }} />
@@ -83,7 +105,18 @@ export default function SelectionScreen() {
                     >
                         <Feather name="arrow-left" size={24} color="#000" />
                     </TouchableOpacity>
-                    <Text style={styles.headerTitle}>{isRoutineEditMode ? 'Editar Rotina' : 'Criar Rotina'}</Text>
+                    <View style={styles.titleRow}>
+                        <Text style={styles.headerTitle}>{isRoutineEditMode ? 'Editar Rotina' : 'Criar Rotina'}</Text>
+                        {isRoutineEditMode ? (
+                            <TouchableOpacity
+                                onPress={() => setShowDeleteModal(true)}
+                                style={[styles.deleteButton, isDeletingRoutine && styles.deleteButtonDisabled]}
+                                disabled={isDeletingRoutine}
+                            >
+                                <Feather name="trash-2" size={20} color="#111" />
+                            </TouchableOpacity>
+                        ) : null}
+                    </View>
                 </View>
 
                 <FlatList
@@ -109,11 +142,26 @@ export default function SelectionScreen() {
 
                 <View style={[styles.footer, { paddingBottom: 24 + insets.bottom }]}>
                     <WorkoutActionButton
-                        title={isRoutineEditMode ? "CONTINUAR EDIÇÃO" : "AVANÇAR"}
+                        title={isRoutineEditMode ? "CONTINUAR EDICAO" : "AVANCAR"}
                         onPress={handleNext}
                         disabled={selectedGroups.length === 0}
                     />
                 </View>
+
+                <ConfirmationModal
+                    visible={showDeleteModal}
+                    title="Excluir rotina?"
+                    message="Esta rotina sera removida permanentemente. Deseja continuar?"
+                    confirmText={isDeletingRoutine ? "Excluindo..." : "Excluir"}
+                    cancelText="Cancelar"
+                    onClose={() => {
+                        if (!isDeletingRoutine) {
+                            setShowDeleteModal(false);
+                        }
+                    }}
+                    onConfirm={handleDeleteRoutine}
+                    confirmButtonColor="#000000"
+                />
             </SafeAreaView>
         </View>
     );
@@ -131,6 +179,11 @@ const styles = StyleSheet.create({
         paddingHorizontal: 24,
         marginBottom: 24,
     },
+    titleRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+    },
     backButton: {
         width: 40,
         height: 40,
@@ -141,6 +194,17 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontFamily: FontFamily.title.extraBold,
         color: '#111',
+    },
+    deleteButton: {
+        width: 40,
+        height: 40,
+        borderRadius: 12,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: Colors.primary,
+    },
+    deleteButtonDisabled: {
+        opacity: 0.6,
     },
     scrollContent: {
         paddingHorizontal: 24,

@@ -24,21 +24,31 @@ export interface XPEvent {
 
 export interface LevelInfo {
     level: number;
-    title: string;
     xpRequired: number;
     xpToNext: number;
 }
 
 export const LEVEL_THRESHOLDS: LevelInfo[] = [
-    { level: 1, title: 'Novato', xpRequired: 0, xpToNext: 1000 },
-    { level: 2, title: 'Dedicado', xpRequired: 1000, xpToNext: 2000 },
-    { level: 3, title: 'Focado', xpRequired: 3000, xpToNext: 4000 },
-    { level: 4, title: 'Consistente', xpRequired: 7000, xpToNext: 8000 },
-    { level: 5, title: 'Atleta', xpRequired: 15000, xpToNext: 15000 },
-    { level: 6, title: 'Elite', xpRequired: 30000, xpToNext: 30000 },
-    { level: 7, title: 'Campeão', xpRequired: 60000, xpToNext: 60000 },
-    { level: 8, title: 'Lenda', xpRequired: 120000, xpToNext: 130000 },
-    { level: 9, title: 'VIRTU', xpRequired: 250000, xpToNext: 0 },
+    { level: 1, xpRequired: 0, xpToNext: 1000 },
+    { level: 2, xpRequired: 1000, xpToNext: 2000 },
+    { level: 3, xpRequired: 3000, xpToNext: 3000 },
+    { level: 4, xpRequired: 6000, xpToNext: 4000 },
+    { level: 5, xpRequired: 10000, xpToNext: 5000 },
+    { level: 6, xpRequired: 15000, xpToNext: 7000 },
+    { level: 7, xpRequired: 22000, xpToNext: 9000 },
+    { level: 8, xpRequired: 31000, xpToNext: 11000 },
+    { level: 9, xpRequired: 42000, xpToNext: 14000 },
+    { level: 10, xpRequired: 56000, xpToNext: 18000 },
+    { level: 11, xpRequired: 74000, xpToNext: 22000 },
+    { level: 12, xpRequired: 96000, xpToNext: 26000 },
+    { level: 13, xpRequired: 122000, xpToNext: 30000 },
+    { level: 14, xpRequired: 152000, xpToNext: 35000 },
+    { level: 15, xpRequired: 187000, xpToNext: 40000 },
+    { level: 16, xpRequired: 227000, xpToNext: 45000 },
+    { level: 17, xpRequired: 272000, xpToNext: 50000 },
+    { level: 18, xpRequired: 322000, xpToNext: 55000 },
+    { level: 19, xpRequired: 377000, xpToNext: 60000 },
+    { level: 20, xpRequired: 437000, xpToNext: 0 },
 ];
 
 export const XP_REWARDS = {
