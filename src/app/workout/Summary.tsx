@@ -28,6 +28,9 @@ export default function WorkoutSummaryScreen() {
     const volume = parseInt(params.volume as string || '0');
     const totalSets = parseInt((params.totalSets as string) || (params.sets as string) || '0');
 
+    const regularSets = parseInt(params.regularSets as string || '0');
+    const extraSets = parseInt(params.extraSets as string || '0');
+
     useEffect(() => {
         if (!hasRecorded.current) {
             hasRecorded.current = true;

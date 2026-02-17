@@ -12,10 +12,10 @@ export function DailyMissionCard() {
             <View style={styles.heroHeader}>
                 <View>
                     <Text style={styles.sectionLabel}>MISSÃO DE HOJE</Text>
-                    <Text style={styles.heroTitle}>
-                        LEG DAY{'\n'}
+                    <View style={styles.heroTitleBlock}>
+                        <Text style={styles.heroTitle}>LEG DAY</Text>
                         <Text style={styles.heroSubtitle}>INFERIORES</Text>
-                    </Text>
+                    </View>
                 </View>
                 <View style={styles.durationBadge}>
                     <Text style={styles.durationText}>60 MIN</Text>
@@ -95,16 +95,25 @@ const styles = StyleSheet.create({
         letterSpacing: 1.5,
         marginBottom: 4,
     },
+    heroTitleBlock: {
+        gap: 0,
+    },
     heroTitle: {
         fontSize: 36,
         fontFamily: FontFamily.title.extraBold,
         color: '#111',
         fontStyle: 'italic',
-        lineHeight: 32,
+        lineHeight: 38,
         letterSpacing: -1,
         textTransform: 'uppercase',
     },
     heroSubtitle: {
+        fontSize: 26,
+        lineHeight: 28,
+        fontFamily: FontFamily.title.extraBold,
+        fontStyle: 'italic',
+        letterSpacing: -0.6,
+        textTransform: 'uppercase',
         color: '#FDCB13',
     },
     durationBadge: {

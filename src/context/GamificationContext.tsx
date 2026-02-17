@@ -5,6 +5,7 @@ import {
     XPEvent,
     LevelInfo,
     AchievementId,
+    XP_REWARDS
 } from '@/src/types/gamification';
 import {
     createInitialState,
@@ -227,11 +228,18 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
         return levelUp;
     }, [state.totalXP]);
 
-    const recordWorkoutComplete = useCallback((stats: { totalSets: number; isPR: boolean; isFirstWorkout: boolean }) => {
+    const recordWorkoutComplete = useCallback((stats: { totalSets: number; regularSets?: number; extraSets?: number; isPR: boolean; isFirstWorkout: boolean }) => {
         let xpEarned = 0;
         const now = new Date();
 
         xpEarned += calculateXPForWorkout();
+
+        if (stats.regularSets !== undefined && stats.extraSets !== undefined) {
+            xpEarned += (stats.regularSets * XP_REWARDS.SET_COMPLETE);
+            xpEarned += (stats.extraSets * XP_REWARDS.EXTRA_SET);
+        } else {
+            xpEarned += (stats.totalSets * XP_REWARDS.SET_COMPLETE);
+        }
 
         const streakResult = updateStreak(state.lastWorkoutDate);
         const nextStreak = streakResult.streakBroken

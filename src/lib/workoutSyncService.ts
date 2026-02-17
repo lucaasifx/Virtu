@@ -3,12 +3,21 @@ import { WorkoutSession, SetLog, ExerciseSession } from '../types/execution';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Json } from './database.types';
 
-const WORKOUT_CACHE_KEY = '@virtu_workouts_cache';
-const CACHE_LAST_SYNC_KEY = '@virtu_last_workout_sync';
+const WORKOUT_CACHE_KEY_PREFIX = '@virtu_workouts_cache';
+const CACHE_LAST_SYNC_KEY_PREFIX = '@virtu_last_workout_sync';
+const ANONYMOUS_CACHE_ID = 'anonymous';
 
 async function getUserIdFromSession(): Promise<string | null> {
     const { data: { session } } = await supabase.auth.getSession();
     return session?.user?.id ?? null;
+}
+
+function getWorkoutCacheKey(userId: string | null): string {
+    return `${WORKOUT_CACHE_KEY_PREFIX}:${userId ?? ANONYMOUS_CACHE_ID}`;
+}
+
+function getLastSyncKey(userId: string | null): string {
+    return `${CACHE_LAST_SYNC_KEY_PREFIX}:${userId ?? ANONYMOUS_CACHE_ID}`;
 }
 
 // Types for JSONB storage
@@ -90,7 +99,7 @@ export async function syncWorkoutToSupabase(
         const resolvedUserId = userId ?? await getUserIdFromSession();
         if (!resolvedUserId) {
             console.log('[WorkoutSync] No user logged in, saving to local cache only');
-            await saveWorkoutToCache(session, durationSeconds, totalVolume);
+            await saveWorkoutToCache(session, durationSeconds, totalVolume, undefined, null);
             return { success: false, error: 'User not authenticated' };
         }
 
@@ -137,22 +146,19 @@ export async function syncWorkoutToSupabase(
 
         if (workoutError) {
             console.error('[WorkoutSync] Error inserting workout:', workoutError);
-            // Fallback to local cache
-            await saveWorkoutToCache(session, durationSeconds, totalVolume);
+            await saveWorkoutToCache(session, durationSeconds, totalVolume, undefined, resolvedUserId);
             return { success: false, error: workoutError.message };
         }
 
         console.log('[WorkoutSync] ✅ Workout synced successfully! ID:', workout.id);
 
-        // Also save to local cache for offline stats
-        await saveWorkoutToCache(session, durationSeconds, totalVolume, workout.id);
+        await saveWorkoutToCache(session, durationSeconds, totalVolume, workout.id, resolvedUserId);
 
         return { success: true, workoutId: workout.id };
 
     } catch (error) {
         console.error('[WorkoutSync] Unexpected error:', error);
-        // Fallback to local cache
-        await saveWorkoutToCache(session, durationSeconds, totalVolume);
+        await saveWorkoutToCache(session, durationSeconds, totalVolume, undefined, userId ?? null);
         return {
             success: false,
             error: error instanceof Error ? error.message : 'Unknown error'
@@ -167,9 +173,13 @@ async function saveWorkoutToCache(
     session: WorkoutSession,
     durationSeconds: number,
     totalVolume: number,
-    serverId?: string
+    serverId?: string,
+    userId?: string | null
 ): Promise<void> {
     try {
+        const resolvedUserId = userId === undefined ? await getUserIdFromSession() : userId;
+        const cacheKey = getWorkoutCacheKey(resolvedUserId);
+        const lastSyncKey = getLastSyncKey(resolvedUserId);
         const exercisesData: WorkoutExerciseData[] = [];
         let totalSets = 0;
 
@@ -202,7 +212,7 @@ async function saveWorkoutToCache(
         };
 
         // Get existing cache
-        const existingCache = await AsyncStorage.getItem(WORKOUT_CACHE_KEY);
+        const existingCache = await AsyncStorage.getItem(cacheKey);
         const workouts: CachedWorkout[] = existingCache ? JSON.parse(existingCache) : [];
 
         // Add new workout at the beginning
@@ -211,8 +221,8 @@ async function saveWorkoutToCache(
         // Keep only last 100 workouts in cache (memory optimization)
         const trimmedWorkouts = workouts.slice(0, 100);
 
-        await AsyncStorage.setItem(WORKOUT_CACHE_KEY, JSON.stringify(trimmedWorkouts));
-        await AsyncStorage.setItem(CACHE_LAST_SYNC_KEY, new Date().toISOString());
+        await AsyncStorage.setItem(cacheKey, JSON.stringify(trimmedWorkouts));
+        await AsyncStorage.setItem(lastSyncKey, new Date().toISOString());
 
         console.log('[WorkoutCache] Saved workout to local cache');
     } catch (error) {
@@ -225,7 +235,18 @@ async function saveWorkoutToCache(
  */
 export async function getCachedWorkouts(): Promise<CachedWorkout[]> {
     try {
-        const cache = await AsyncStorage.getItem(WORKOUT_CACHE_KEY);
+        const userId = await getUserIdFromSession();
+        const scopedKey = getWorkoutCacheKey(userId);
+        const [scopedCache, legacyCache] = await Promise.all([
+            AsyncStorage.getItem(scopedKey),
+            AsyncStorage.getItem(WORKOUT_CACHE_KEY_PREFIX),
+        ]);
+
+        if (!scopedCache && legacyCache) {
+            await AsyncStorage.setItem(scopedKey, legacyCache);
+        }
+
+        const cache = scopedCache ?? legacyCache;
         return cache ? JSON.parse(cache) : [];
     } catch (error) {
         console.error('[WorkoutCache] Error reading cache:', error);
@@ -259,10 +280,12 @@ export async function syncWorkoutsFromSupabaseForUser(
             return await getCachedWorkouts();
         }
 
-        // Calculate date limit
         const dateLimit = new Date();
         dateLimit.setDate(dateLimit.getDate() - daysToSync);
         const dateLimitStr = dateLimit.toISOString();
+        const dateLimitMs = dateLimit.getTime();
+        const cacheKey = getWorkoutCacheKey(userId);
+        const lastSyncKey = getLastSyncKey(userId);
 
         const { data: workouts, error } = await supabase
             .from('workouts')
@@ -287,33 +310,33 @@ export async function syncWorkoutsFromSupabaseForUser(
             muscleGroups: w.muscle_groups ?? [],
             exercisesData: parseExercisesData(w.exercises_data),
         }));
+        const [currentScopedCache, legacyCache] = await Promise.all([
+            AsyncStorage.getItem(cacheKey),
+            AsyncStorage.getItem(WORKOUT_CACHE_KEY_PREFIX),
+        ]);
 
-        // MERGE Strategy:
-        // We typically want to keep older cached workouts if they exist, but update recent ones.
-        // For simplicity and per user request ("pull last 30 days"), we can overwrite/merge.
-        // Let's read current cache, remove overlaps, and prepend new ones?
-        // Or simpler: Just fetch everything we need?
-        // If we only fetch 30 days, we might lose older history in cache if we just overwrite.
-        // So we should merge.
+        if (!currentScopedCache && legacyCache) {
+            await AsyncStorage.setItem(cacheKey, legacyCache);
+        }
 
-        const currentCache = await getCachedWorkouts();
-
-        // Create a map of current cache for duplicates check
-        const cacheMap = new Map(currentCache.map(w => [w.id, w]));
-
-        // Update/Add fetched workouts
-        fetchedWorkouts.forEach(w => {
-            cacheMap.set(w.id, w);
+        const currentCacheRaw = currentScopedCache ?? legacyCache;
+        const currentCache: CachedWorkout[] = currentCacheRaw ? JSON.parse(currentCacheRaw) : [];
+        const olderCache = currentCache.filter((workout) => {
+            const startedAtMs = new Date(workout.startedAt).getTime();
+            return Number.isFinite(startedAtMs) && startedAtMs < dateLimitMs;
         });
 
-        // Convert back to array and sort
-        const mergedWorkouts = Array.from(cacheMap.values())
-            .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())
-            .slice(0, 100); // Keep limit 100 locally
+        const mergedById = new Map<string, CachedWorkout>();
+        [...fetchedWorkouts, ...olderCache].forEach((workout) => {
+            mergedById.set(workout.id, workout);
+        });
 
-        // Update local cache
-        await AsyncStorage.setItem(WORKOUT_CACHE_KEY, JSON.stringify(mergedWorkouts));
-        await AsyncStorage.setItem(CACHE_LAST_SYNC_KEY, new Date().toISOString());
+        const mergedWorkouts = Array.from(mergedById.values())
+            .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())
+            .slice(0, 100);
+
+        await AsyncStorage.setItem(cacheKey, JSON.stringify(mergedWorkouts));
+        await AsyncStorage.setItem(lastSyncKey, new Date().toISOString());
 
         console.log(`[WorkoutSync] ✅ Synced ${fetchedWorkouts.length} workouts (last ${daysToSync} days) from Supabase`);
         return mergedWorkouts;

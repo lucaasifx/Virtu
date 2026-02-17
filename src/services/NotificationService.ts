@@ -3,7 +3,6 @@ import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 import { registerNotificationCategories } from './BackgroundTasks';
 
-// Define keys to avoid magic strings
 export const WORKOUT_CHANNEL_ID = 'workout-active';
 export const GENERAL_CHANNEL_ID = 'general-messages';
 
@@ -18,7 +17,6 @@ export class NotificationService {
         if (this.isInitialized) return;
 
         if (Constants.appOwnership === 'expo') {
-            // console.warn("Notifications disabled in Expo Go to prevent crash.");
             this.isInitialized = true;
             return;
         }
@@ -76,8 +74,13 @@ export class NotificationService {
         }
     }
 
+    private static isUpdating = false;
+
     static async showWorkoutNotification(title: string, subtitle: string, body: string, isPaused: boolean = false) {
         if (!this.Notifications) return;
+
+        if (this.isUpdating) return;
+
         if (
             this.lastWorkoutPayload &&
             this.lastWorkoutPayload.title === title &&
@@ -87,6 +90,8 @@ export class NotificationService {
         ) {
             return;
         }
+
+        this.isUpdating = true;
 
         try {
             await this.dismissPresentedWorkoutNotifications();
@@ -110,6 +115,8 @@ export class NotificationService {
             this.workoutNotificationId = identifier;
             this.lastWorkoutPayload = { title, subtitle, body, isPaused };
         } catch {
+        } finally {
+            this.isUpdating = false;
         }
     }
 

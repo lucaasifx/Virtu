@@ -170,9 +170,8 @@ export function ActiveWorkoutProvider({ children, onWorkoutEnd }: ActiveWorkoutP
         if (!currentSession) return;
 
         const endTime = new Date();
-        const { duration, totalVolume, totalSets } = calculateWorkoutSummary(currentSession, endTime);
+        const { duration, totalVolume, totalSets, regularSets, extraSets } = calculateWorkoutSummary(currentSession, endTime);
 
-        // Sync to Supabase in BACKGROUND (non-blocking)
         import('@/src/lib/workoutSyncService').then(({ syncWorkoutToSupabase }) => {
             syncWorkoutToSupabase(currentSession, duration, totalVolume, userId ?? undefined)
                 .then(result => console.log('[Workout] Background sync:', result.success ? '✅' : '❌', result.error || ''))
@@ -184,13 +183,14 @@ export function ActiveWorkoutProvider({ children, onWorkoutEnd }: ActiveWorkoutP
         activeIndexRef.current = 0;
         setSession(null);
 
-        // Navigate immediately (don't wait for sync)
         router.replace({
             pathname: '/workout/Summary',
             params: {
                 duration: duration.toString(),
                 volume: totalVolume.toString(),
                 totalSets: totalSets.toString(),
+                regularSets: regularSets.toString(),
+                extraSets: extraSets.toString(),
                 date: endTime.toISOString(),
             }
         });

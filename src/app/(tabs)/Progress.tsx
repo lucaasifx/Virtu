@@ -1,13 +1,11 @@
 import React from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View, StyleSheet } from 'react-native';
 import { Header } from '@/components/ui/Header';
 import { useGamification } from '@/src/context/GamificationContext';
-import { ProgressDashboard } from '@/components/features/Progress/ProgressDashboard';
 import { Colors } from '@/src/constants/theme';
+import { ComingSoon } from '@/components/ui/ComingSoon';
 
 export default function Progress() {
-    const insets = useSafeAreaInsets();
     const { state, xpProgress, levelInfo } = useGamification();
 
     return (
@@ -20,16 +18,7 @@ export default function Progress() {
                     maxXp: xpProgress.max,
                 }}
             />
-
-            <FlatList
-                data={[]}
-                keyExtractor={(_, index) => `progress-${index}`}
-                renderItem={() => null}
-                contentContainerStyle={[styles.content, { paddingTop: insets.top + 140 }]}
-                showsVerticalScrollIndicator={false}
-                ListHeaderComponent={<ProgressDashboard />}
-                ListFooterComponent={<View style={styles.footerSpace} />}
-            />
+            <ComingSoon />
         </View>
     );
 }
@@ -38,11 +27,5 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: Colors.background,
-    },
-    content: {
-        paddingHorizontal: 24,
-    },
-    footerSpace: {
-        height: 140,
     },
 });
